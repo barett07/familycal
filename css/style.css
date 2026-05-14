@@ -544,6 +544,7 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
 .modal-body {
   padding: 16px 20px;
   display: flex; flex-direction: column; gap: 18px;
+  overflow-x: hidden;
 }
 
 /* ── Form ─────────────────────────────────────────────────────────────────── */
@@ -580,6 +581,8 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
 input[type="date"],
 input[type="time"] {
   color-scheme: dark;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ── Type Picker ──────────────────────────────────────────────────────────── */
