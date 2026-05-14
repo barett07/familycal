@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="一步一腳印">
+  <meta name="theme-color" content="#000000">
+  <title>福先生&福太太 一步一腳印</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ── Auth Screen ─────────────────────────────────────────────────────── -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-icon">🏠</div>
+    <h1>福家行事曆</h1>
+    <p>請輸入驗證碼進入</p>
+    <form id="auth-form">
+      <input id="passcode-input" type="password" class="auth-input"
+        placeholder="驗證碼" autocomplete="current-password" autofocus>
+      <button id="auth-submit" type="submit" class="auth-submit">進入</button>
+    </form>
+    <span id="auth-error" class="auth-hint"></span>
+  </div>
+</div>
+
+<!-- ── Main App ────────────────────────────────────────────────────────── -->
+<div id="app" class="hidden">
+
+  <header class="app-header">
+    <span class="app-title">🏠 福先生&福太太 一步一腳印🦆🐿️</span>
+    <button class="logout-btn" onclick="logout()">登出</button>
+  </header>
+
+  <!-- Upcoming Banner -->
+  <div id="upcoming-banner" class="hidden">
+    <button id="upcoming-toggle">
+      <span class="upcoming-icon">⚡</span>
+      <span class="upcoming-label">即將到來</span>
+      <span id="upcoming-count" class="upcoming-count">0</span>
+      <span class="upcoming-chevron">›</span>
+    </button>
+    <div id="upcoming-list"></div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav">
+    <button class="tab active" data-tab="calendar" onclick="switchTab('calendar')">
+      <span class="tab-icon">📅</span> 行事曆
+    </button>
+    <button class="tab" data-tab="wishlist" onclick="switchTab('wishlist')">
+      <span class="tab-icon">✨</span> 想去清單
+    </button>
+  </nav>
+
+  <!-- View Toggle (calendar only) -->
+  <div id="view-toggle-bar">
+    <div class="seg-control">
+      <button id="btn-list" class="view-toggle active" onclick="switchView('list')">清單</button>
+      <button id="btn-grid" class="view-toggle"        onclick="switchView('grid')">月曆</button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+
+    <!-- Calendar Tab -->
+    <div id="calendar-tab">
+      <!-- List View -->
+      <div id="list-view">
+        <div id="events-list"></div>
+      </div>
+
+      <!-- Grid View -->
+      <div id="grid-view" class="hidden">
+        <div class="cal-nav">
+          <button onclick="prevMonth()">‹</button>
+          <span id="calendar-month-label"></span>
+          <button onclick="nextMonth()">›</button>
+        </div>
+        <div class="cal-weekdays">
+          <span>日</span><span>一</span><span>二</span><span>三</span>
+          <span>四</span><span>五</span><span>六</span>
+        </div>
+        <div id="calendar-grid"></div>
+        <div id="day-events"></div>
+      </div>
+    </div>
+
+    <!-- Wishlist Tab -->
+    <div id="wishlist-tab" class="hidden">
+      <div id="wishlist-list"></div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- FAB -->
+  <button class="fab hidden" id="fab" onclick="openAddModal()">+</button>
+
+</div><!-- /app -->
+
+<!-- ── Event Modal ─────────────────────────────────────────────────────── -->
+<div id="event-modal" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('event-modal')"></div>
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button class="modal-cancel" onclick="closeModal('event-modal')">取消</button>
+      <h2 id="event-modal-title">新增事件</h2>
+      <button class="modal-save" onclick="saveEvent()">儲存</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="event-id">
+      <div class="form-group">
+        <label>標題</label>
+        <input type="text" id="event-title" class="form-input" placeholder="事件名稱" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>類型</label>
+        <div class="type-picker">
+          <button class="type-btn" data-type="醫療回診">醫療回診</button>
+          <button class="type-btn active" data-type="家庭出遊">家庭出遊</button>
+          <button class="type-btn" data-type="聚會/聚餐">聚會/聚餐</button>
+          <button class="type-btn" data-type="考試">考試</button>
+          <button class="type-btn" data-type="雜務">雜務</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>開始日期</label>
+        <input type="date" id="event-start" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>結束日期 <span class="optional">（多天活動選填）</span></label>
+        <input type="date" id="event-end" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>時間 <span class="optional">（選填）</span></label>
+        <input type="time" id="event-time" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>備註 <span class="optional">（選填）</span></label>
+        <textarea id="event-notes" class="form-textarea" rows="3" placeholder="補充說明…"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Wishlist Modal ──────────────────────────────────────────────────── -->
+<div id="wish-modal" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('wish-modal')"></div>
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button class="modal-cancel" onclick="closeModal('wish-modal')">取消</button>
+      <h2 id="wish-modal-title">新增想去地點</h2>
+      <button class="modal-save" onclick="saveWish()">儲存</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="wish-id">
+      <div class="form-group">
+        <label>地點名稱</label>
+        <input type="text" id="wish-name" class="form-input" placeholder="地點名稱" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>連結 <span class="optional">（選填）</span></label>
+        <input type="url" id="wish-url" class="form-input" placeholder="https://…">
+      </div>
+      <div class="form-group">
+        <label>備註 <span class="optional">（選填）</span></label>
+        <textarea id="wish-notes" class="form-textarea" rows="3" placeholder="補充說明…"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Schedule Modal ─────────────────────────────────────────────────── -->
+<div id="schedule-modal" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('schedule-modal')"></div>
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button class="modal-cancel" onclick="closeModal('schedule-modal')">取消</button>
+      <h2>排入行事曆</h2>
+      <button class="modal-save" onclick="scheduleWish()">確定</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="sched-wish-id">
+      <p id="sched-wish-name" class="sched-name"></p>
+      <div class="form-group">
+        <label>類型</label>
+        <div class="type-picker" id="sched-type-picker">
+          <button class="type-btn" data-type="醫療回診">醫療回診</button>
+          <button class="type-btn active" data-type="家庭出遊">家庭出遊</button>
+          <button class="type-btn" data-type="聚會/聚餐">聚會/聚餐</button>
+          <button class="type-btn" data-type="考試">考試</button>
+          <button class="type-btn" data-type="雜務">雜務</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>開始日期</label>
+        <input type="date" id="sched-date" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>結束日期 <span class="optional">（多天活動選填）</span></label>
+        <input type="date" id="sched-end-date" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>時間 <span class="optional">（選填）</span></label>
+        <input type="time" id="sched-time" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>備註 <span class="optional">（選填）</span></label>
+        <textarea id="sched-notes" class="form-textarea" rows="3" placeholder="補充說明…"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
