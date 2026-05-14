@@ -581,29 +581,33 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
 input[type="date"],
 input[type="time"] {
   color-scheme: dark;
-  min-width: 0;
-  max-width: 100%;
+  display: block;
+  width: 100%;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 .input-wrap {
-  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
 }
 .input-wrap .form-input {
-  padding-right: 40px;
+  flex: 1;
+  min-width: 0;
+  width: auto;
 }
 .input-clear {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  background: var(--s3);
+  flex-shrink: 0;
+  width: 40px;
+  border-radius: 10px;
+  background: var(--s2);
+  border: 1.5px solid var(--s3);
   color: var(--text2);
-  font-size: 15px; line-height: 1;
+  font-size: 20px;
   display: flex; align-items: center; justify-content: center;
 }
-.input-clear:active { opacity: 0.5; }
+.input-clear:active { background: var(--s3); }
 
 /* ── Type Picker ──────────────────────────────────────────────────────────── */
 .type-picker {
