@@ -221,19 +221,21 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
 /* ── View Toggle ──────────────────────────────────────────────────────────── */
 #view-toggle-bar {
   flex-shrink: 0;
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center;
   padding: 8px 16px;
   background: var(--bg);
   border-bottom: 1px solid var(--sep);
 }
 
 .ical-btn {
-  font-size: 13px; font-weight: 500;
-  color: var(--text2);
+  margin-left: auto;
+  font-size: 12px; font-weight: 500;
+  color: var(--text3);
   text-decoration: none;
   padding: 5px 10px;
   border-radius: 8px;
-  background: var(--s2);
+  border: 1px solid var(--sep);
+  white-space: nowrap;
   transition: opacity 0.15s;
 }
 .ical-btn:active { opacity: 0.5; }
