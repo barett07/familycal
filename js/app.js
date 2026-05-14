@@ -28,6 +28,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('upcoming-banner').classList.toggle('expanded');
   });
 
+  // 日期/時間輸入框加 × 清除按鈕
+  document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
+    const wrap = document.createElement('div');
+    wrap.className = 'input-wrap';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'input-clear';
+    btn.innerHTML = '&times;';
+    btn.onclick = () => { input.value = ''; };
+    wrap.appendChild(btn);
+  });
+
   // 排入行事曆 modal 的 type picker
   document.querySelectorAll('#sched-type-picker .type-btn').forEach(btn => {
     btn.addEventListener('click', () => {

@@ -585,6 +585,26 @@ input[type="time"] {
   max-width: 100%;
 }
 
+.input-wrap {
+  position: relative;
+}
+.input-wrap .form-input {
+  padding-right: 40px;
+}
+.input-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--s3);
+  color: var(--text2);
+  font-size: 15px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.input-clear:active { opacity: 0.5; }
+
 /* ── Type Picker ──────────────────────────────────────────────────────────── */
 .type-picker {
   display: flex; flex-wrap: wrap; gap: 8px;
