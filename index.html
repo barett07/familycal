@@ -33,44 +33,49 @@
 <!-- ── Main App ────────────────────────────────────────────────────────── -->
 <div id="app" class="hidden">
 
-  <header class="app-header">
-    <span class="app-title">🏠 福先生&福太太 一步一腳印🦆🐿️</span>
-    <div class="header-actions">
-      <button class="logout-btn" onclick="logout()">登出</button>
+  <!-- Sticky Header Group -->
+  <div id="sticky-top">
+
+    <header class="app-header">
+      <span class="app-title">🏠 福先生&福太太 一步一腳印🦆🐿️</span>
+      <div class="header-actions">
+        <button class="logout-btn" onclick="logout()">登出</button>
+      </div>
+    </header>
+
+    <!-- Upcoming Banner -->
+    <div id="upcoming-banner" class="hidden">
+      <button id="upcoming-toggle">
+        <span class="upcoming-icon">⚡</span>
+        <span class="upcoming-label">即將到來</span>
+        <span id="upcoming-count" class="upcoming-count">0</span>
+        <span class="upcoming-chevron">›</span>
+      </button>
+      <div id="upcoming-list"></div>
     </div>
-  </header>
 
-  <!-- Upcoming Banner -->
-  <div id="upcoming-banner" class="hidden">
-    <button id="upcoming-toggle">
-      <span class="upcoming-icon">⚡</span>
-      <span class="upcoming-label">即將到來</span>
-      <span id="upcoming-count" class="upcoming-count">0</span>
-      <span class="upcoming-chevron">›</span>
-    </button>
-    <div id="upcoming-list"></div>
-  </div>
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+      <button class="tab active" data-tab="calendar" onclick="switchTab('calendar')">
+        <span class="tab-icon">📅</span> 行事曆
+      </button>
+      <button class="tab" data-tab="wishlist" onclick="switchTab('wishlist')">
+        <span class="tab-icon">✨</span> 想去清單
+      </button>
+    </nav>
 
-  <!-- Tab Navigation -->
-  <nav class="tab-nav">
-    <button class="tab active" data-tab="calendar" onclick="switchTab('calendar')">
-      <span class="tab-icon">📅</span> 行事曆
-    </button>
-    <button class="tab" data-tab="wishlist" onclick="switchTab('wishlist')">
-      <span class="tab-icon">✨</span> 想去清單
-    </button>
-  </nav>
-
-  <!-- View Toggle (calendar only) -->
-  <div id="view-toggle-bar">
-    <div class="seg-control">
-      <button id="btn-list" class="view-toggle active" onclick="switchView('list')">清單</button>
-      <button id="btn-grid" class="view-toggle"        onclick="switchView('grid')">月曆</button>
+    <!-- View Toggle (calendar only) -->
+    <div id="view-toggle-bar">
+      <div class="seg-control">
+        <button id="btn-list" class="view-toggle active" onclick="switchView('list')">清單</button>
+        <button id="btn-grid" class="view-toggle"        onclick="switchView('grid')">月曆</button>
+      </div>
+      <a class="ical-btn"
+         href="webcal://oqyjixphmdrhcmomskth.supabase.co/functions/v1/fc-ical"
+         title="訂閱至 Apple 行事曆">📅 訂閱</a>
     </div>
-    <a class="ical-btn"
-       href="webcal://oqyjixphmdrhcmomskth.supabase.co/functions/v1/fc-ical"
-       title="訂閱至 Apple 行事曆">📅 訂閱</a>
-  </div>
+
+  </div><!-- /sticky-top -->
 
   <!-- Content -->
   <div id="content">

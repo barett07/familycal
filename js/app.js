@@ -10,6 +10,8 @@ const S = {
 };
 
 // ── Boot ───────────────────────────────────────────────────────────────────
+history.scrollRestoration = 'manual';
+
 document.addEventListener('DOMContentLoaded', () => {
   if (Auth.get()) {
     showApp();
@@ -27,6 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('upcoming-toggle').addEventListener('click', () => {
     document.getElementById('upcoming-banner').classList.toggle('expanded');
   });
+
+  // 自動讓 #content 的 padding-top 跟著 #sticky-top 高度變化
+  new ResizeObserver(() => {
+    const h = document.getElementById('sticky-top').offsetHeight + 'px';
+    document.getElementById('content').style.paddingTop = h;
+    document.documentElement.style.setProperty('--sticky-h', h);
+  }).observe(document.getElementById('sticky-top'));
 
   // 日期/時間輸入框加 × 清除按鈕
   document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
@@ -63,6 +72,7 @@ function showAuth() {
 function showApp() {
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
+  window.scrollTo(0, 0);
   loadData();
 }
 
@@ -467,12 +477,16 @@ function deleteWish(id) {
 function openModal(id) {
   const m = document.getElementById(id);
   m.classList.remove('hidden');
-  requestAnimationFrame(() => m.classList.add('open'));
+  requestAnimationFrame(() => {
+    m.classList.add('open');
+    document.documentElement.style.background = 'transparent';
+  });
 }
 
 function closeModal(id) {
   const m = document.getElementById(id);
   m.classList.remove('open');
+  document.documentElement.style.background = '';
   setTimeout(() => m.classList.add('hidden'), 300);
 }
 
@@ -700,18 +714,18 @@ function switchTab(tab) {
   S.tab = tab;
   document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
   document.getElementById('view-toggle-bar').classList.toggle('hidden', tab !== 'calendar');
-  document.getElementById('content').scrollTop = 0;
+  window.scrollTo(0, 0);
   render();
 }
 
 function switchView(view) {
   S.view = view;
+  window.scrollTo(0, 0);
   if (view === 'grid') {
     const today = new Date();
     S.gridYear  = today.getFullYear();
     S.gridMonth = today.getMonth();
     S.selectedDay = todayStr();
-    document.getElementById('content').scrollTop = 0;
   } else {
     S.selectedDay = null;
   }
