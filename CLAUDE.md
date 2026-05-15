@@ -50,6 +50,27 @@
 - Apple 行事曆訂閱（清單/月曆切換列右側按鈕）
 - 樂觀更新（UI 先更新，寫入背景執行）
 
+## 已知技術細節與踩坑記錄
+
+### iOS Safari date input 溢出問題
+直接在 `form-input` 上設 `max-width` 沒用。解法：用 `.input-wrap`（flexbox）包住 input + 清除按鈕：
+```css
+.input-wrap { display: flex; align-items: stretch; gap: 8px; }
+.input-wrap .form-input { flex: 1; min-width: 0; width: auto; }
+```
+input 一定要加 `box-sizing: border-box` 和 `color-scheme: dark`。
+
+### 觸控目標（Touch Target）
+iOS 最低 44×44px，用 `::before` 偽元素擴大點擊範圍：
+```css
+.event-checkbox { position: relative; }
+.event-checkbox::before { content: ''; position: absolute; inset: -10px; }
+```
+全域加 `touch-action: manipulation` 消除 iOS 300ms 點擊延遲。
+
+### 樂觀更新模式
+新增事件用 tempId（`_tmp_${Date.now()}`），UI 先顯示，API 成功後替換真實 id；失敗則從陣列移除並顯示 toast。
+
 ## 部署流程
 
 ```bash

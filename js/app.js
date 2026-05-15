@@ -128,11 +128,11 @@ function render() {
 
 function renderUpcoming() {
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const in7 = new Date(today); in7.setDate(in7.getDate() + 7);
+  const in3 = new Date(today); in3.setDate(in3.getDate() + 3);
 
   const upcoming = S.events.filter(e => {
     const d = new Date(e.start_date + 'T00:00:00');
-    return !e.completed && d >= today && d <= in7;
+    return !e.completed && d >= today && d <= in3;
   });
 
   const banner = document.getElementById('upcoming-banner');
@@ -307,7 +307,10 @@ function eventItemHTML(e, isEditor) {
     const en = new Date(e.end_date + 'T00:00:00');
     dateStr += `–${en.getMonth() + 1}/${String(en.getDate()).padStart(2, '0')}`;
   }
-  if (e.event_time) dateStr += ` ${e.event_time.slice(0, 5)}`;
+  if (e.event_time) {
+    dateStr += ` ${e.event_time.slice(0, 5)}`;
+    if (e.event_time_end) dateStr += `–${e.event_time_end.slice(0, 5)}`;
+  }
 
   return `<div class="event-item${e.completed ? ' completed' : ''}" data-id="${e.id}" data-completed="${e.completed}">
     <div class="event-checkbox${e.completed ? ' checked' : ''}" style="--tc:${cfg.color}">
@@ -472,14 +475,15 @@ function closeModal(id) {
 }
 
 // Event Modal
-function openAddEvent() {
+function openAddEvent(prefilledDate = null) {
   document.getElementById('event-modal-title').textContent = '新增事件';
-  document.getElementById('event-id').value       = '';
-  document.getElementById('event-title').value    = '';
-  document.getElementById('event-start').value    = todayStr();
-  document.getElementById('event-end').value      = '';
-  document.getElementById('event-time').value     = '';
-  document.getElementById('event-notes').value    = '';
+  document.getElementById('event-id').value        = '';
+  document.getElementById('event-title').value     = '';
+  document.getElementById('event-start').value     = prefilledDate || todayStr();
+  document.getElementById('event-end').value       = '';
+  document.getElementById('event-time').value      = '';
+  document.getElementById('event-time-end').value  = '';
+  document.getElementById('event-notes').value     = '';
   document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.type-btn[data-type="家庭出遊"]').classList.add('active');
   openModal('event-modal');
@@ -488,23 +492,25 @@ function openAddEvent() {
 
 function openEditEvent(ev) {
   document.getElementById('event-modal-title').textContent = '編輯事件';
-  document.getElementById('event-id').value    = ev.id;
-  document.getElementById('event-title').value = ev.title;
-  document.getElementById('event-start').value = ev.start_date;
-  document.getElementById('event-end').value   = ev.end_date  || '';
-  document.getElementById('event-time').value  = ev.event_time ? ev.event_time.slice(0, 5) : '';
-  document.getElementById('event-notes').value = ev.notes     || '';
+  document.getElementById('event-id').value         = ev.id;
+  document.getElementById('event-title').value      = ev.title;
+  document.getElementById('event-start').value      = ev.start_date;
+  document.getElementById('event-end').value        = ev.end_date   || '';
+  document.getElementById('event-time').value       = ev.event_time     ? ev.event_time.slice(0, 5)     : '';
+  document.getElementById('event-time-end').value   = ev.event_time_end ? ev.event_time_end.slice(0, 5) : '';
+  document.getElementById('event-notes').value      = ev.notes      || '';
   document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === ev.type));
   openModal('event-modal');
 }
 
 async function saveEvent() {
-  const id    = document.getElementById('event-id').value;
-  const title = document.getElementById('event-title').value.trim();
-  const start = document.getElementById('event-start').value;
-  const end   = document.getElementById('event-end').value;
-  const time  = document.getElementById('event-time').value;
-  const notes = document.getElementById('event-notes').value.trim();
+  const id      = document.getElementById('event-id').value;
+  const title   = document.getElementById('event-title').value.trim();
+  const start   = document.getElementById('event-start').value;
+  const end     = document.getElementById('event-end').value;
+  const time    = document.getElementById('event-time').value;
+  const timeEnd = document.getElementById('event-time-end').value;
+  const notes   = document.getElementById('event-notes').value.trim();
   const typeBtn = document.querySelector('.type-btn.active');
 
   if (!title)   { showToast('請輸入標題', true); return; }
@@ -514,23 +520,28 @@ async function saveEvent() {
   const data = {
     title,
     type: typeBtn.dataset.type,
-    start_date: start,
-    end_date:   end   || null,
-    event_time: time  || null,
-    notes:      notes || null,
+    start_date:     start,
+    end_date:       end     || null,
+    event_time:     time    || null,
+    event_time_end: timeEnd || null,
+    notes:          notes   || null,
   };
 
   if (id) {
-    // 編輯：樂觀更新
     const i = S.events.findIndex(e => e.id === id);
     const backup = i >= 0 ? { ...S.events[i] } : null;
     if (i >= 0) S.events[i] = { ...S.events[i], ...data };
+    S.events.sort((a, b) => a.start_date.localeCompare(b.start_date));
     closeModal('event-modal');
     render();
     Api.write('fc_events', 'update', data, id)
-      .then(r => { if (i >= 0) S.events[i] = r.data; })
+      .then(r => {
+        const j = S.events.findIndex(e => e.id === id);
+        if (j >= 0) { S.events[j] = r.data; render(); }
+      })
       .catch(() => {
-        if (i >= 0 && backup) S.events[i] = backup;
+        const j = S.events.findIndex(e => e.id === id);
+        if (j >= 0 && backup) { S.events[j] = backup; S.events.sort((a, b) => a.start_date.localeCompare(b.start_date)); }
         render(); showToast('儲存失敗', true);
       });
   } else {
@@ -621,6 +632,7 @@ function openScheduleModal(w) {
   document.getElementById('sched-date').value           = '';
   document.getElementById('sched-end-date').value       = '';
   document.getElementById('sched-time').value           = '';
+  document.getElementById('sched-time-end').value       = '';
   document.getElementById('sched-notes').value          = w.notes || '';
   // 預設類型：家庭出遊
   document.querySelectorAll('#sched-type-picker .type-btn').forEach(b => {
@@ -634,6 +646,7 @@ async function scheduleWish() {
   const date     = document.getElementById('sched-date').value;
   const endDate  = document.getElementById('sched-end-date').value;
   const time     = document.getElementById('sched-time').value;
+  const timeEnd  = document.getElementById('sched-time-end').value;
   const notes    = document.getElementById('sched-notes').value.trim();
   const typeBtn  = document.querySelector('#sched-type-picker .type-btn.active');
 
@@ -646,10 +659,11 @@ async function scheduleWish() {
     const evData = {
       title: w.name,
       type: typeBtn?.dataset.type || '家庭出遊',
-      start_date: date,
-      end_date: endDate || null,
-      event_time: time  || null,
-      notes: notes      || null,
+      start_date:     date,
+      end_date:       endDate  || null,
+      event_time:     time     || null,
+      event_time_end: timeEnd  || null,
+      notes:          notes    || null,
     };
     const evRes = await Api.write('fc_events', 'insert', evData);
     S.events.push(evRes.data);
@@ -676,7 +690,8 @@ async function scheduleWish() {
 
 // ── FAB / Tab Switching ────────────────────────────────────────────────────
 function openAddModal() {
-  if (S.tab === 'wishlist') openAddWish(); else openAddEvent();
+  if (S.tab === 'wishlist') openAddWish();
+  else openAddEvent(S.view === 'grid' && S.selectedDay ? S.selectedDay : null);
 }
 
 function switchTab(tab) {
@@ -688,7 +703,16 @@ function switchTab(tab) {
 
 function switchView(view) {
   S.view = view;
-  S.selectedDay = null;
+  if (view === 'grid') {
+    const today = new Date();
+    S.gridYear  = today.getFullYear();
+    S.gridMonth = today.getMonth();
+    S.selectedDay = todayStr();
+    document.getElementById('upcoming-banner').classList.remove('expanded');
+    document.getElementById('content').scrollTop = 0;
+  } else {
+    S.selectedDay = null;
+  }
   document.getElementById('btn-list').classList.toggle('active', view === 'list');
   document.getElementById('btn-grid').classList.toggle('active', view === 'grid');
   document.getElementById('list-view').classList.toggle('hidden', view !== 'list');
