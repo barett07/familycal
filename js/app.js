@@ -155,7 +155,9 @@ function renderUpcoming() {
 }
 
 function renderFAB() {
-  document.getElementById('fab').classList.toggle('hidden', !Auth.isEditor());
+  const isEditor = Auth.isEditor();
+  const viewerOnWishlist = !isEditor && Auth.get()?.role === 'viewer' && S.tab === 'wishlist';
+  document.getElementById('fab').classList.toggle('hidden', !isEditor && !viewerOnWishlist);
 }
 
 // ── List View ──────────────────────────────────────────────────────────────
@@ -698,6 +700,7 @@ function switchTab(tab) {
   S.tab = tab;
   document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
   document.getElementById('view-toggle-bar').classList.toggle('hidden', tab !== 'calendar');
+  document.getElementById('content').scrollTop = 0;
   render();
 }
 
@@ -708,7 +711,6 @@ function switchView(view) {
     S.gridYear  = today.getFullYear();
     S.gridMonth = today.getMonth();
     S.selectedDay = todayStr();
-    document.getElementById('upcoming-banner').classList.remove('expanded');
     document.getElementById('content').scrollTop = 0;
   } else {
     S.selectedDay = null;
