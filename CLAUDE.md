@@ -81,11 +81,19 @@ iOS 最低 44×44px，用 `::before` 偽元素擴大點擊範圍：
 **為什麼不用 `position: sticky`？** 試過了，在 flex 容器和 `min-height` 父層的組合下不會正確保留空間，內容會跑到 sticky-top 後面。`position: fixed` + 動態 padding 最可靠。
 
 ### scrollIntoView 配合 fixed sticky-top
-`renderListView` 用 `scrollIntoView({ block: 'start' })` 自動捲動到當月，但 fixed sticky-top 會蓋住捲動目標。解法：用 CSS 變數 + `scroll-margin-top`：
+`renderListView` 用 `scrollIntoView({ block: 'start' })` 自動捲動，但 fixed sticky-top 會蓋住捲動目標。解法：用 CSS 變數 + `scroll-margin-top`：
 ```css
-.month-header { scroll-margin-top: var(--sticky-h, 0px); }
+.month-header,
+.event-item { scroll-margin-top: var(--sticky-h, 0px); }
 ```
 JS 在 ResizeObserver 裡同步更新：`document.documentElement.style.setProperty('--sticky-h', h)`。
+
+### 清單預設捲動位置：最近期的事件
+`renderListView` 打開（或從月曆切回清單、再次點「清單」按鈕）時，會自動捲到「第一個 `end_date`（或 `start_date`，若無 end）`>= 今天` 的事件」，讓最近期事件出現在第一條。
+
+**為何用 `end_date || start_date`：** 多天事件（如 5/15–5/20）今天 5/16 仍在進行中，不該被視為「已過去」而跳過。
+**Fallback：** 若全部事件都已過去，就捲到當月 `month-header`（避免空捲動）。
+**靠 `S.events` 已按 `start_date` 升序排序**（`api.js` 和 add/update 後的 sort 都會維持），所以 `Array.find` 第一筆就是答案。
 
 ### 防止瀏覽器自動還原捲動位置
 改成整頁捲動後，瀏覽器會記住先前的捲動位置並在重新整理時還原，導致開啟頁面時不在頂部。在 script 最頂端加：
