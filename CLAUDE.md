@@ -71,6 +71,34 @@ iOS 最低 44×44px，用 `::before` 偽元素擴大點擊範圍：
 ### 樂觀更新模式
 新增事件用 tempId（`_tmp_${Date.now()}`），UI 先顯示，API 成功後替換真實 id；失敗則從陣列移除並顯示 toast。
 
+### 整頁自然捲動架構（讓 Safari 工具列自動隱藏）
+原本 `#app { height: 100dvh; overflow: hidden }` + `#content { overflow-y: auto }` 是內部捲動，Safari 工具列永遠不會隱藏，內容也不會透出毛玻璃。改成整頁捲動：
+- `html, body { height: auto }`、`#app { min-height: 100dvh }`（移除 `display: flex` 和 `overflow: hidden`）
+- 標題列/即將到來/Tab/視圖切換包進 `<div id="sticky-top">`，用 `position: fixed; top: 0; left: 0; right: 0`
+- `#content` 用 JS 動態設 `padding-top` 等於 sticky-top 高度
+- 用 `ResizeObserver` 監聽 sticky-top 高度變化（橫幅展開/收合、螢幕轉向都自動更新）
+
+**為什麼不用 `position: sticky`？** 試過了，在 flex 容器和 `min-height` 父層的組合下不會正確保留空間，內容會跑到 sticky-top 後面。`position: fixed` + 動態 padding 最可靠。
+
+### scrollIntoView 配合 fixed sticky-top
+`renderListView` 用 `scrollIntoView({ block: 'start' })` 自動捲動到當月，但 fixed sticky-top 會蓋住捲動目標。解法：用 CSS 變數 + `scroll-margin-top`：
+```css
+.month-header { scroll-margin-top: var(--sticky-h, 0px); }
+```
+JS 在 ResizeObserver 裡同步更新：`document.documentElement.style.setProperty('--sticky-h', h)`。
+
+### 防止瀏覽器自動還原捲動位置
+改成整頁捲動後，瀏覽器會記住先前的捲動位置並在重新整理時還原，導致開啟頁面時不在頂部。在 script 最頂端加：
+```javascript
+history.scrollRestoration = 'manual';
+```
+
+### sticky-top 內元素的半透明背景會透出內容
+即將到來橫幅原本是 `rgba(255,159,10,0.12)`（近全透明），改成整頁捲動後內容會從橫幅後面透出來。解法：用預先混色的固體色 `#1e1300`（黑底 + 12% 橙色的混色結果）。
+
+### 多個 raf 排隊的覆蓋順序
+`scrollIntoView` 和 `window.scrollTo` 同時用 `requestAnimationFrame` 包起來時，後排的會覆蓋前排。`loadData` 完成後若再呼叫一次 `scrollTo(0,0)`，會把 `renderListView` 的 `scrollIntoView` 覆蓋掉。
+
 ## 部署流程
 
 ```bash
