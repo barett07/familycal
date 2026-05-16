@@ -196,12 +196,17 @@ function renderListView() {
   container.innerHTML = html;
   attachEventListeners(container);
 
-  // 自動捲動到當月
-  const today = new Date();
-  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-  const monthEl = document.getElementById(`month-${todayKey}`);
-  if (monthEl) {
-    requestAnimationFrame(() => monthEl.scrollIntoView({ block: 'start', behavior: 'instant' }));
+  // 自動捲動到最近期的事件（end_date 或 start_date >= 今天）
+  const t = new Date();
+  const todayStr = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  const nextEvent = S.events.find(e => (e.end_date || e.start_date) >= todayStr);
+  let target = nextEvent ? container.querySelector(`.event-item[data-id="${nextEvent.id}"]`) : null;
+  if (!target) {
+    const todayKey = todayStr.slice(0, 7);
+    target = document.getElementById(`month-${todayKey}`);
+  }
+  if (target) {
+    requestAnimationFrame(() => target.scrollIntoView({ block: 'start', behavior: 'instant' }));
   }
 }
 

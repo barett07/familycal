@@ -295,6 +295,7 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
 
 /* ── Event Item ───────────────────────────────────────────────────────────── */
 .event-item {
+  scroll-margin-top: var(--sticky-h, 0px);
   display: flex; align-items: flex-start; gap: 12px;
   padding: 12px 16px 12px 20px;
   border-bottom: 1px solid var(--sep);
