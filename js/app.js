@@ -318,11 +318,12 @@ function renderWishlist() {
 // ── HTML Builders ──────────────────────────────────────────────────────────
 function eventItemHTML(e, isEditor) {
   const cfg = TYPE_CONFIG[e.type] || TYPE_CONFIG['雜務'];
+  const WD  = ['日', '一', '二', '三', '四', '五', '六'];
   const s   = new Date(e.start_date + 'T00:00:00');
-  let dateStr = `${s.getMonth() + 1}/${String(s.getDate()).padStart(2, '0')}`;
+  let dateStr = `${s.getMonth() + 1}/${String(s.getDate()).padStart(2, '0')} (${WD[s.getDay()]})`;
   if (e.end_date && e.end_date !== e.start_date) {
     const en = new Date(e.end_date + 'T00:00:00');
-    dateStr += `–${en.getMonth() + 1}/${String(en.getDate()).padStart(2, '0')}`;
+    dateStr += `–${en.getMonth() + 1}/${String(en.getDate()).padStart(2, '0')} (${WD[en.getDay()]})`;
   }
   if (e.event_time) {
     dateStr += ` ${e.event_time.slice(0, 5)}`;
