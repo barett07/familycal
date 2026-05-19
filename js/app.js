@@ -1,3 +1,6 @@
+const escapeHtml = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+const safeUrl = u => /^https?:\/\//i.test(u) ? u : '#';
+
 // ── State ──────────────────────────────────────────────────────────────────
 const S = {
   events:    [],
@@ -159,7 +162,7 @@ function renderUpcoming() {
     const label = diff === 0 ? '今天' : diff === 1 ? '明天' : `${diff} 天後`;
     return `<div class="upcoming-item">
       <span class="upcoming-day-label">${label}</span>
-      <span class="upcoming-item-title" style="color:${cfg.color}">${e.title}</span>
+      <span class="upcoming-item-title" style="color:${cfg.color}">${escapeHtml(e.title)}</span>
     </div>`;
   }).join('');
 }
@@ -337,11 +340,11 @@ function eventItemHTML(e, isEditor) {
     <div class="event-body">
       <div class="event-row1">
         <span class="event-date">${dateStr}</span>
-        <span class="event-title">${e.title}</span>
+        <span class="event-title">${escapeHtml(e.title)}</span>
       </div>
       <div class="event-row2">
-        <span class="event-badge" style="color:${cfg.color};background:${cfg.bg}">${e.type}</span>
-        ${e.notes ? `<span class="event-notes">${e.notes}</span>` : ''}
+        <span class="event-badge" style="color:${cfg.color};background:${cfg.bg}">${escapeHtml(e.type)}</span>
+        ${e.notes ? `<span class="event-notes">${escapeHtml(e.notes)}</span>` : ''}
       </div>
     </div>
     ${isEditor ? `<button class="event-menu" aria-label="選項">•••</button>` : ''}
@@ -355,11 +358,11 @@ function wishItemHTML(w, isEditor) {
     </div>
     <div class="event-body">
       <div class="event-row1">
-        <span class="event-title">${w.name}</span>
+        <span class="event-title">${escapeHtml(w.name)}</span>
       </div>
       <div class="event-row2">
-        ${w.url ? `<a class="wish-link" href="${w.url}" target="_blank" rel="noopener noreferrer">🔗 查看連結</a>` : ''}
-        ${w.notes ? `<span class="event-notes">${w.notes}</span>` : ''}
+        ${w.url ? `<a class="wish-link" href="${safeUrl(w.url)}" target="_blank" rel="noopener noreferrer">🔗 查看連結</a>` : ''}
+        ${w.notes ? `<span class="event-notes">${escapeHtml(w.notes)}</span>` : ''}
         ${w.scheduled_event_id ? `<span class="wish-scheduled-badge">已排入行事曆</span>` : ''}
       </div>
     </div>
