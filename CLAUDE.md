@@ -108,6 +108,26 @@ history.scrollRestoration = 'manual';
 ### 多個 raf 排隊的覆蓋順序
 `scrollIntoView` 和 `window.scrollTo` 同時用 `requestAnimationFrame` 包起來時，後排的會覆蓋前排。`loadData` 完成後若再呼叫一次 `scrollTo(0,0)`，會把 `renderListView` 的 `scrollIntoView` 覆蓋掉。
 
+## 資安架構（重要）
+
+### 寫入保護
+- 所有寫入（新增/編輯/刪除 fc_events、fc_wishlist）都走 Edge Function `fc-write`，帶 `X-FC-Passcode` header 驗證
+- RLS：anon 只能 SELECT `fc_events`、`fc_wishlist`，不能直接寫入
+- Supabase Secret：`FC_EDITOR_PASSCODE`（editor 用）、`FC_VIEWER_PASSCODE`（viewer 用）
+
+### XSS 防護
+`js/app.js` 最頂端定義了：
+```javascript
+const escapeHtml = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+const safeUrl = u => /^https?:\/\//i.test(u) ? u : '#';
+```
+**所有從 Supabase 撈回的文字欄位都已套用 `escapeHtml()`**（包括 `e.title`、`e.notes`、`e.type`、`w.name`、`w.notes`），`w.url` 套用 `safeUrl()`。新增任何 innerHTML 渲染時務必沿用。
+
+### CORS
+Edge Function `fc-write`、`fc-auth`、`fc-ical`：
+- `fc-write` / `fc-auth`：應限定 `https://barett07.github.io`（不要用 `*`）
+- `fc-ical`：Apple/Google Calendar 訂閱需要 `*`，保留開放
+
 ## 部署流程
 
 ```bash
