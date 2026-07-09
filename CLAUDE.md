@@ -125,8 +125,14 @@ const safeUrl = u => /^https?:\/\//i.test(u) ? u : '#';
 
 ### CORS
 Edge Function `fc-write`、`fc-auth`、`fc-ical`：
-- `fc-write` / `fc-auth`：應限定 `https://barett07.github.io`（不要用 `*`）
+- `fc-write` / `fc-auth`：**已限定** `https://barett07.github.io`（2026-07-09 完成，原本一直是 `*`）
 - `fc-ical`：Apple/Google Calendar 訂閱需要 `*`，保留開放
+- ⚠️ 三個 function 的 `verify_jwt` 都是 **false**，重部署時必須明確帶 `verify_jwt: false`（MCP 預設 true，會被靜默重置——stock-tracker 曾因此連續失敗 6 週）
+- 本地 repo **沒有** Edge Function 原始碼，線上版本就是唯一版本，改動前先用 MCP `get_edge_function` 拉現況
+
+### 資料庫加固記錄（2026-07-09）
+- `fc_set_updated_at()` 已鎖定 `search_path = ''`（消除 Supabase security advisor 警告，觸發器實測正常）
+- `fc_wishlist.scheduled_event_id` 外鍵已補索引 `fc_wishlist_scheduled_event_id_idx`
 
 ## 部署流程
 
