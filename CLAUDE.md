@@ -27,10 +27,17 @@
 
 1. **innerHTML 中所有 Supabase 文字欄位必須套 `escapeHtml()`**,`w.url` 套 `safeUrl()`(兩者定義在 `js/app.js` 最頂端)
 2. **寫入一律走 Edge Function `fc-write`**(RLS:anon 只能 SELECT)
-3. **本地 repo 沒有 Edge Function 原始碼**,線上版本就是唯一版本——改動前先用 MCP `get_edge_function` 拉現況
-4. **三個 function 的 `verify_jwt` 都是 false**,重部署必須明確帶 `verify_jwt: false`(MCP 預設 true 會被靜默重置,stock-tracker 曾因此連續失敗 6 週)
+3. **Edge Function 原始碼在 `supabase/functions/`**(2026-07-11 從線上拉回,git 是唯一真相來源);改動後**一律用 `./deploy.sh` 部署**(verify_jwt 已寫死在 `supabase/config.toml`,腳本含自動驗證)
+4. **三個 function 的 `verify_jwt` 都是 false**;避免用 MCP 部署(預設 true 會被靜默重置,stock-tracker 曾因此連續失敗 6 週)
 5. CORS:`fc-write` / `fc-auth` 限定 `https://barett07.github.io`;`fc-ical` 保留 `*`(行事曆訂閱需要)
 6. 動版面注意整頁捲動架構的連鎖規則(→ `NOTES.md`)
+
+## ✅ 改完自檢(交付前逐條確認)
+
+- 改了 innerHTML?→ Supabase 來的文字都套了 `escapeHtml()`,URL 套了 `safeUrl()`
+- 改了版面/捲動?→ 對照 NOTES.md 的整頁捲動架構,iPhone Safari 實測過
+- 改了 Edge Function?→ 用 `./deploy.sh` 部署且驗證全綠
+- 在本地實際開啟頁面看過改動,不是只看程式碼
 
 ## 部署
 
