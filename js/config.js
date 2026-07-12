@@ -19,3 +19,12 @@ const CAT_CONFIG = {
   '咖啡': '☕', '甜點': '🍰', '小吃': '🍢',
 };
 const CATS = Object.keys(CAT_CONFIG);
+
+// 人均價位分級(存 fc_places.price_level 1–5)
+const PRICE_LEVELS = {
+  1: { sym: '$',     label: '150內' },
+  2: { sym: '$$',    label: '150–300' },
+  3: { sym: '$$$',   label: '300–600' },
+  4: { sym: '$$$$',  label: '600–1000' },
+  5: { sym: '$$$$$', label: '1000以上' },
+};

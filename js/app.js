@@ -94,6 +94,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('#star-picker button').forEach(btn => {
     btn.addEventListener('click', () => setStars(+btn.dataset.star));
   });
+
+  // 美食地圖:人均價位 picker(選填,點已選的取消)
+  document.getElementById('price-picker').innerHTML = Object.entries(PRICE_LEVELS).map(([lv, c]) =>
+    `<button type="button" class="type-btn price-btn" data-level="${lv}">${c.sym} ${c.label}</button>`).join('');
+  document.querySelectorAll('.price-btn').forEach(btn => {
+    btn.addEventListener('click', () => setPrice(+btn.dataset.level === ratePrice ? 0 : +btn.dataset.level));
+  });
 });
 
 // ── Auth Screen ────────────────────────────────────────────────────────────
@@ -755,6 +762,7 @@ let foodMarkers = {};
 let foodMapFitted = false;
 let placeDraft = { lat: null, lng: null, address: null };  // place-modal 的解析結果暫存
 let rateStars = 0;
+let ratePrice = 0;     // 人均價位 1–5,0 = 未選
 let pinPickId = null;  // 「在地圖上點選位置」模式中的店家 id
 
 function ensureFoodMap() {
@@ -887,6 +895,7 @@ function placeItemHTML(p, isEditor) {
       ${p.address ? `<div class="place-address">📍 ${escapeHtml(p.address)}</div>` : ''}
       <div class="event-row2">
         <span class="${p.eaten ? 'place-badge-eaten' : 'place-badge-todo'}">${p.eaten ? '已吃' : '待吃'}</span>
+        ${p.eaten && PRICE_LEVELS[p.price_level] ? `<span class="place-price">${PRICE_LEVELS[p.price_level].sym} ${PRICE_LEVELS[p.price_level].label}</span>` : ''}
         ${p.gmaps_url ? `<a class="wish-link place-nav" href="${safeUrl(p.gmaps_url)}" target="_blank" rel="noopener noreferrer">🧭 導航</a>` : ''}
         ${p.lat == null ? '<span class="place-nopin">未定位</span>' : ''}
       </div>
@@ -1074,6 +1083,7 @@ function openRateModal(p) {
   document.getElementById('rate-place-name').textContent = `「${p.name}」`;
   document.getElementById('rate-review').value = p.review || '';
   setStars(p.rating || 0);
+  setPrice(p.price_level || 0);
   openModal('rate-modal');
 }
 
@@ -1083,6 +1093,12 @@ function setStars(n) {
     b.classList.toggle('lit', +b.dataset.star <= n));
 }
 
+function setPrice(n) {
+  ratePrice = n;
+  document.querySelectorAll('.price-btn').forEach(b =>
+    b.classList.toggle('active', +b.dataset.level === n));
+}
+
 function saveRating() {
   const id     = document.getElementById('rate-place-id').value;
   const review = document.getElementById('rate-review').value.trim();
@@ -1090,13 +1106,14 @@ function saveRating() {
 
   const p = S.places.find(x => x.id === id);
   if (!p) return;
-  const backup = { eaten: p.eaten, rating: p.rating, review: p.review };
+  const backup = { eaten: p.eaten, rating: p.rating, review: p.review, price_level: p.price_level };
   p.eaten  = true;
   p.rating = rateStars;
   p.review = review || null;
+  p.price_level = ratePrice || null;
   closeModal('rate-modal');
   render();
-  Api.write('fc_places', 'update', { eaten: true, rating: rateStars, review: review || null }, id)
+  Api.write('fc_places', 'update', { eaten: true, rating: rateStars, review: review || null, price_level: ratePrice || null }, id)
     .then(() => showToast('已標記吃過 ✓'))
     .catch(() => { Object.assign(p, backup); render(); showToast('儲存失敗', true); });
 }

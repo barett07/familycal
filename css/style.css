@@ -826,6 +826,16 @@ input[type="time"] {
 .place-badge-todo  { color: #ff453a; background: rgba(255,69,58,0.12); }
 .place-badge-eaten { color: #30d158; background: rgba(48,209,88,0.12); }
 
+.place-price {
+  font-size: 11px; font-weight: 600;
+  color: #ffd60a;
+  background: rgba(255,214,10,0.1);
+  padding: 2px 8px;
+  border-radius: 99px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
 .place-nopin {
   font-size: 11px; font-weight: 600;
   color: var(--text3);
