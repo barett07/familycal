@@ -11,6 +11,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
   <title>福先生&福太太 一步一腳印</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -62,6 +63,9 @@
       <button class="tab" data-tab="wishlist" onclick="switchTab('wishlist')">
         <span class="tab-icon">✨</span> 想去清單
       </button>
+      <button class="tab" data-tab="foodmap" onclick="switchTab('foodmap')">
+        <span class="tab-icon">🍜</span> 美食地圖
+      </button>
     </nav>
 
     <!-- View Toggle (calendar only) -->
@@ -74,6 +78,9 @@
          href="webcal://oqyjixphmdrhcmomskth.supabase.co/functions/v1/fc-ical"
          title="訂閱至 Apple 行事曆">📅 訂閱</a>
     </div>
+
+    <!-- Foodmap Map(放在 sticky-top 內,ResizeObserver 會自動撐開 #content 的 padding) -->
+    <div id="foodmap-map" class="hidden"></div>
 
   </div><!-- /sticky-top -->
 
@@ -106,6 +113,19 @@
     <!-- Wishlist Tab -->
     <div id="wishlist-tab" class="hidden">
       <div id="wishlist-list"></div>
+    </div>
+
+    <!-- Foodmap Tab -->
+    <div id="foodmap-tab" class="hidden">
+      <div id="foodmap-filters">
+        <div class="chip-row" id="status-chips">
+          <button class="chip active" data-status="all">全部</button>
+          <button class="chip" data-status="todo">待吃</button>
+          <button class="chip" data-status="eaten">已吃</button>
+        </div>
+        <div class="chip-row" id="cat-chips"></div>
+      </div>
+      <div id="places-list"></div>
     </div>
 
   </div><!-- /content -->
@@ -240,7 +260,75 @@
   </div>
 </div>
 
+<!-- ── Place Modal(美食地圖:新增/編輯店家)──────────────────────────── -->
+<div id="place-modal" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('place-modal')"></div>
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button class="modal-cancel" onclick="closeModal('place-modal')">取消</button>
+      <h2 id="place-modal-title">新增店家</h2>
+      <button class="modal-save" onclick="savePlace()">儲存</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="place-id">
+      <div class="form-group">
+        <label>Google Maps 連結</label>
+        <div class="input-wrap">
+          <input type="url" id="place-url" class="form-input" placeholder="貼上分享連結…" autocomplete="off">
+          <button type="button" class="resolve-btn" id="place-resolve-btn" onclick="resolvePlaceUrl()">解析</button>
+        </div>
+        <span id="place-resolve-hint" class="resolve-hint"></span>
+      </div>
+      <div class="form-group">
+        <label>店名</label>
+        <input type="text" id="place-name" class="form-input" placeholder="店家名稱" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>分類</label>
+        <div class="type-picker" id="place-cat-picker"></div>
+      </div>
+      <div class="form-group">
+        <label>備註 <span class="optional">（選填）</span></label>
+        <textarea id="place-notes" class="form-textarea" rows="3" placeholder="想吃什麼、誰推薦的…"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rate Modal(標記已吃 + 評分)─────────────────────────────────────── -->
+<div id="rate-modal" class="modal hidden">
+  <div class="modal-overlay" onclick="closeModal('rate-modal')"></div>
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button class="modal-cancel" onclick="closeModal('rate-modal')">取消</button>
+      <h2>吃過了！</h2>
+      <button class="modal-save" onclick="saveRating()">儲存</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="rate-place-id">
+      <p id="rate-place-name" class="sched-name"></p>
+      <div class="form-group">
+        <label>評分</label>
+        <div class="star-picker" id="star-picker">
+          <button type="button" data-star="1">★</button>
+          <button type="button" data-star="2">★</button>
+          <button type="button" data-star="3">★</button>
+          <button type="button" data-star="4">★</button>
+          <button type="button" data-star="5">★</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>一句話心得 <span class="optional">（選填）</span></label>
+        <input type="text" id="rate-review" class="form-input" placeholder="好吃嗎？" autocomplete="off">
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/api.js"></script>

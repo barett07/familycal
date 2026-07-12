@@ -1,6 +1,6 @@
 # CLAUDE.md — familycal
 
-**家庭行事曆** — Stan 與太太共用的事件 + 想去清單 App。
+**家庭行事曆** — Stan 與太太共用的事件 + 想去清單 + 美食地圖 App。
 
 - 正式網址:https://barett07.github.io/familycal/
 - GitHub:https://github.com/barett07/familycal
@@ -11,13 +11,14 @@
 |---|---|
 | 前端 | 純 HTML/CSS/JS,無 build tool,GitHub Pages 部署 |
 | 資料庫 | 共用 RailwayShift 的 Supabase 專案(`oqyjixphmdrhcmomskth`),table 前綴 `fc_` |
-| Edge Functions | `fc-write`(寫入,帶 `X-FC-Passcode`)、`fc-auth`(驗證)、`fc-ical`(行事曆訂閱) |
+| Edge Functions | `fc-write`(寫入,帶 `X-FC-Passcode`)、`fc-auth`(驗證)、`fc-ical`(行事曆訂閱)、`fc-resolve-place`(解析 Google Maps 連結) |
+| 地圖 | Leaflet 1.9.4 + OpenStreetMap(CDN 載入,免 key) |
 
-- 資料表:`fc_events`(id, title, type, start_date, end_date, event_time, notes, completed, …)、`fc_wishlist`(id, name, url, notes, completed, scheduled_event_id FK → fc_events, …)
+- 資料表:`fc_events`(id, title, type, start_date, end_date, event_time, notes, completed, …)、`fc_wishlist`(id, name, url, notes, completed, scheduled_event_id FK → fc_events, …)、`fc_places`(id, name, category, gmaps_url, address, lat, lng, notes, eaten, rating, review, …)
 - 事件類型(type CHECK 約束):`醫療回診` / `家庭出遊` / `聚會/聚餐` / `考試` / `雜務`
 - 權限:editor(Stan「福先生」+ 太太「福太太」,完整 CRUD)、viewer(未來給小孩,唯讀);驗證後存 `localStorage.fc_auth_v1`
 - Supabase Secrets:`FC_EDITOR_PASSCODE`、`FC_VIEWER_PASSCODE`(Dashboard 手動管理)
-- 主要功能:清單/月曆雙視圖、即將到來橫幅(7 天)、多天事件、想去清單(排入行事曆自動移出)、Apple 行事曆訂閱、樂觀更新
+- 主要功能:清單/月曆雙視圖、即將到來橫幅(7 天)、多天事件、想去清單(排入行事曆自動移出)、美食地圖(貼 Google Maps 連結自動解析店名/座標、地圖清單連動、已吃評分)、Apple 行事曆訂閱、樂觀更新
 
 ## 先讀這些
 
@@ -28,8 +29,8 @@
 1. **innerHTML 中所有 Supabase 文字欄位必須套 `escapeHtml()`**,`w.url` 套 `safeUrl()`(兩者定義在 `js/app.js` 最頂端)
 2. **寫入一律走 Edge Function `fc-write`**(RLS:anon 只能 SELECT)
 3. **Edge Function 原始碼在 `supabase/functions/`**(2026-07-11 從線上拉回,git 是唯一真相來源);改動後**一律用 `./deploy.sh` 部署**(verify_jwt 已寫死在 `supabase/config.toml`,腳本含自動驗證)
-4. **三個 function 的 `verify_jwt` 都是 false**;避免用 MCP 部署(預設 true 會被靜默重置,stock-tracker 曾因此連續失敗 6 週)
-5. CORS:`fc-write` / `fc-auth` 限定 `https://barett07.github.io`;`fc-ical` 保留 `*`(行事曆訂閱需要)
+4. **四個 function 的 `verify_jwt` 都是 false**;避免用 MCP 部署(預設 true 會被靜默重置,stock-tracker 曾因此連續失敗 6 週)
+5. CORS:`fc-write` / `fc-auth` / `fc-resolve-place` 限定 `https://barett07.github.io`;`fc-ical` 保留 `*`(行事曆訂閱需要)
 6. 動版面注意整頁捲動架構的連鎖規則(→ `NOTES.md`)
 
 ## ✅ 改完自檢(交付前逐條確認)

@@ -715,6 +715,158 @@ input[type="time"] {
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.toast-error { border-color: #ff453a; color: #ff453a; }
 
+/* ── Foodmap ──────────────────────────────────────────────────────────────── */
+#foodmap-map {
+  height: 40dvh;
+  border-bottom: 1px solid var(--sep);
+  background: var(--s1);
+}
+
+#foodmap-filters {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--sep);
+}
+
+.chip-row {
+  display: flex; gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex-shrink: 0;
+  font-size: 13px; font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 99px;
+  background: var(--s2);
+  color: var(--text2);
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.chip:active { opacity: 0.7; }
+.chip.active { background: var(--accent); color: #000; }
+
+/* 地圖 pin(divIcon,不依賴 Leaflet 預設圖片) */
+.place-pin-wrap { background: none; border: none; }
+.place-pin {
+  width: 34px; height: 34px;
+  background: #fff;
+  border: 3px solid #ff453a;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+  position: relative;
+}
+.place-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%; bottom: -10px;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top: 9px solid #ff453a;
+  border-bottom: 0;
+}
+.place-pin.pin-eaten { border-color: #30d158; }
+.place-pin.pin-eaten::after { border-top-color: #30d158; }
+
+/* 定位到我的位置按鈕(外觀比照 Leaflet 縮放鈕) */
+.locate-btn {
+  width: 34px; height: 34px;
+  background: #fff;
+  border: 2px solid rgba(0,0,0,0.2);
+  background-clip: padding-box;
+  border-radius: 6px;
+  font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.locate-btn:active { background: #f4f4f4; }
+
+/* Leaflet popup 深色化 */
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+  background: var(--s2);
+  color: var(--text);
+}
+.leaflet-container a.leaflet-popup-close-button { color: var(--text2); }
+.place-popup { font-size: 14px; line-height: 1.7; }
+.place-popup a { color: #0a84ff; text-decoration: none; }
+
+/* 店家卡片 */
+.place-cat-emoji {
+  flex-shrink: 0;
+  font-size: 24px;
+  width: 32px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.place-address {
+  font-size: 12px;
+  color: var(--text3);
+  word-break: break-word;
+}
+
+.place-stars {
+  color: #ffd60a;
+  font-size: 13px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+.place-badge-todo, .place-badge-eaten {
+  font-size: 11px; font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+.place-badge-todo  { color: #ff453a; background: rgba(255,69,58,0.12); }
+.place-badge-eaten { color: #30d158; background: rgba(48,209,88,0.12); }
+
+.place-nopin {
+  font-size: 11px; font-weight: 600;
+  color: var(--text3);
+  border: 1px solid var(--s3);
+  padding: 1px 8px;
+  border-radius: 99px;
+}
+
+.place-item { cursor: pointer; }
+.place-item.flash { background: rgba(255,159,10,0.18); }
+
+/* place modal:解析按鈕與提示 */
+.resolve-btn {
+  flex-shrink: 0;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #000;
+  font-size: 14px; font-weight: 600;
+}
+.resolve-btn:disabled { opacity: 0.5; }
+.resolve-btn:active   { opacity: 0.7; }
+
+.resolve-hint {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+  min-height: 16px;
+}
+
+/* rate modal:星星 picker */
+.star-picker { display: flex; gap: 4px; }
+.star-picker button {
+  font-size: 34px;
+  color: var(--s3);
+  padding: 2px 6px;
+  transition: color 0.1s, transform 0.1s;
+}
+.star-picker button:active { transform: scale(1.2); }
+.star-picker button.lit    { color: #ffd60a; }
+
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

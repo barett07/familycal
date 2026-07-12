@@ -5,11 +5,13 @@ const safeUrl = u => /^https?:\/\//i.test(u) ? u : '#';
 const S = {
   events:    [],
   wishlist:  [],
-  tab:       'calendar',   // 'calendar' | 'wishlist'
+  places:    [],
+  tab:       'calendar',   // 'calendar' | 'wishlist' | 'foodmap'
   view:      'list',       // 'list' | 'grid'
   gridYear:  new Date().getFullYear(),
   gridMonth: new Date().getMonth(),
   selectedDay: null,
+  foodFilter: { status: 'all', category: null },  // status: 'all' | 'todo' | 'eaten'
 };
 
 // ── Boot ───────────────────────────────────────────────────────────────────
@@ -60,6 +62,37 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('#sched-type-picker .type-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     });
+  });
+
+  // 美食地圖:篩選 chips
+  document.getElementById('cat-chips').innerHTML = CATS.map(c =>
+    `<button class="chip" data-cat="${c}">${CAT_CONFIG[c]} ${c}</button>`).join('');
+  document.querySelectorAll('#status-chips .chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      S.foodFilter.status = btn.dataset.status;
+      renderFoodmap();
+    });
+  });
+  document.querySelectorAll('#cat-chips .chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      S.foodFilter.category = S.foodFilter.category === btn.dataset.cat ? null : btn.dataset.cat;
+      renderFoodmap();
+    });
+  });
+
+  // 美食地圖:店家 modal 的分類 picker(建立在全域 .type-btn 綁定之後,不會被重複綁定)
+  document.getElementById('place-cat-picker').innerHTML = CATS.map(c =>
+    `<button type="button" class="type-btn cat-btn" data-cat="${c}">${CAT_CONFIG[c]} ${c}</button>`).join('');
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // 美食地圖:星星 picker
+  document.querySelectorAll('#star-picker button').forEach(btn => {
+    btn.addEventListener('click', () => setStars(+btn.dataset.star));
   });
 });
 
@@ -115,9 +148,10 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
 // ── Data ───────────────────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const [events, wishlist] = await Promise.all([Api.getEvents(), Api.getWishlist()]);
+    const [events, wishlist, places] = await Promise.all([Api.getEvents(), Api.getWishlist(), Api.getPlaces()]);
     S.events   = events;
     S.wishlist = wishlist;
+    S.places   = places;
     render();
   } catch (err) {
     console.error('Load error:', err);
@@ -128,14 +162,16 @@ async function loadData() {
 function render() {
   renderUpcoming();
   renderFAB();
+  document.getElementById('calendar-tab').classList.toggle('hidden', S.tab !== 'calendar');
+  document.getElementById('wishlist-tab').classList.toggle('hidden', S.tab !== 'wishlist');
+  document.getElementById('foodmap-tab').classList.toggle('hidden', S.tab !== 'foodmap');
+  document.getElementById('foodmap-map').classList.toggle('hidden', S.tab !== 'foodmap');
   if (S.tab === 'calendar') {
-    document.getElementById('calendar-tab').classList.remove('hidden');
-    document.getElementById('wishlist-tab').classList.add('hidden');
     if (S.view === 'list') renderListView(); else renderGridView();
-  } else {
-    document.getElementById('calendar-tab').classList.add('hidden');
-    document.getElementById('wishlist-tab').classList.remove('hidden');
+  } else if (S.tab === 'wishlist') {
     renderWishlist();
+  } else {
+    renderFoodmap();
   }
 }
 
@@ -713,14 +749,386 @@ async function scheduleWish() {
   } catch (err) { showToast('失敗：' + err.message, true); }
 }
 
+// ── Foodmap ────────────────────────────────────────────────────────────────
+let foodMap = null;
+let foodMarkers = {};
+let foodMapFitted = false;
+let placeDraft = { lat: null, lng: null, address: null };  // place-modal 的解析結果暫存
+let rateStars = 0;
+let pinPickId = null;  // 「在地圖上點選位置」模式中的店家 id
+
+function ensureFoodMap() {
+  if (foodMap) return;
+  foodMap = L.map('foodmap-map');
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(foodMap);
+  foodMap.setView([23.97, 120.98], 7);  // 預設:台灣全島
+  foodMap.on('click', e => {
+    if (!pinPickId) return;
+    setPlacePosition(pinPickId, e.latlng.lat, e.latlng.lng);
+    pinPickId = null;
+  });
+
+  // 定位到我的位置按鈕(掛在縮放鈕下方)
+  const locateCtrl = L.control({ position: 'topleft' });
+  locateCtrl.onAdd = () => {
+    const btn = L.DomUtil.create('button', 'locate-btn');
+    btn.type = 'button';
+    btn.innerHTML = '📍';
+    btn.title = '定位到我的位置';
+    L.DomEvent.disableClickPropagation(btn);
+    btn.onclick = locateMe;
+    return btn;
+  };
+  locateCtrl.addTo(foodMap);
+}
+
+let myLocMarker = null;
+
+function locateMe() {
+  if (!navigator.geolocation) { showToast('此裝置不支援定位', true); return; }
+  showToast('定位中…');
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      if (myLocMarker) myLocMarker.remove();
+      myLocMarker = L.circleMarker([lat, lng], {
+        radius: 8, color: '#fff', weight: 2.5, fillColor: '#0a84ff', fillOpacity: 1,
+      }).addTo(foodMap).bindPopup('我在這裡');
+      foodMap.flyTo([lat, lng], Math.max(foodMap.getZoom(), 15), { duration: 0.8 });
+    },
+    () => showToast('無法取得位置,請確認已允許定位權限', true),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+function placeIcon(p) {
+  return L.divIcon({
+    className: 'place-pin-wrap',
+    html: `<div class="place-pin${p.eaten ? ' pin-eaten' : ''}">${CAT_CONFIG[p.category] || '🍽️'}</div>`,
+    iconSize: [34, 43],
+    iconAnchor: [17, 43],
+    popupAnchor: [0, -46],
+  });
+}
+
+function filteredPlaces() {
+  return S.places.filter(p => {
+    if (S.foodFilter.status === 'todo'  &&  p.eaten) return false;
+    if (S.foodFilter.status === 'eaten' && !p.eaten) return false;
+    if (S.foodFilter.category && p.category !== S.foodFilter.category) return false;
+    return true;
+  });
+}
+
+function starsHTML(rating) {
+  return `<span class="place-stars">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</span>`;
+}
+
+function renderFoodmap() {
+  ensureFoodMap();
+  // 容器剛從 hidden 變可見,Leaflet 需要重新量尺寸
+  requestAnimationFrame(() => foodMap.invalidateSize());
+
+  document.querySelectorAll('#status-chips .chip').forEach(b =>
+    b.classList.toggle('active', b.dataset.status === S.foodFilter.status));
+  document.querySelectorAll('#cat-chips .chip').forEach(b =>
+    b.classList.toggle('active', b.dataset.cat === S.foodFilter.category));
+
+  const list = filteredPlaces();
+  const isEditor = Auth.isEditor();
+
+  Object.values(foodMarkers).forEach(m => m.remove());
+  foodMarkers = {};
+  const located = list.filter(p => p.lat != null && p.lng != null);
+  located.forEach(p => {
+    const m = L.marker([p.lat, p.lng], { icon: placeIcon(p) }).addTo(foodMap);
+    m.bindPopup(placePopupHTML(p));
+    m.on('click', () => highlightPlaceCard(p.id));
+    foodMarkers[p.id] = m;
+  });
+
+  if (!foodMapFitted && located.length > 0) {
+    foodMap.fitBounds(located.map(p => [p.lat, p.lng]), { padding: [30, 30], maxZoom: 15 });
+    foodMapFitted = true;
+  }
+
+  const container = document.getElementById('places-list');
+  if (S.places.length === 0) {
+    container.innerHTML = '<div class="empty-state">還沒有想吃的店家<br>點右下角 <strong>+</strong> 貼上 Google Maps 連結新增</div>';
+    return;
+  }
+  if (list.length === 0) {
+    container.innerHTML = '<div class="empty-state">沒有符合篩選的店家</div>';
+    return;
+  }
+  container.innerHTML = list.map(p => placeItemHTML(p, isEditor)).join('');
+  container.querySelectorAll('.place-item').forEach(el => {
+    el.addEventListener('click', () => focusPlace(el.dataset.id));
+    el.querySelector('.place-nav')?.addEventListener('click', ev => ev.stopPropagation());
+    el.querySelector('.event-menu')?.addEventListener('click', ev => {
+      ev.stopPropagation();
+      showPlaceMenu(el.dataset.id);
+    });
+  });
+}
+
+function placeItemHTML(p, isEditor) {
+  const emoji = CAT_CONFIG[p.category] || '🍽️';
+  return `<div class="event-item place-item" data-id="${p.id}">
+    <div class="place-cat-emoji">${emoji}</div>
+    <div class="event-body">
+      <div class="event-row1">
+        <span class="event-title">${escapeHtml(p.name)}</span>
+        ${p.eaten && p.rating ? starsHTML(p.rating) : ''}
+      </div>
+      ${p.address ? `<div class="place-address">📍 ${escapeHtml(p.address)}</div>` : ''}
+      <div class="event-row2">
+        <span class="${p.eaten ? 'place-badge-eaten' : 'place-badge-todo'}">${p.eaten ? '已吃' : '待吃'}</span>
+        ${p.gmaps_url ? `<a class="wish-link place-nav" href="${safeUrl(p.gmaps_url)}" target="_blank" rel="noopener noreferrer">🧭 導航</a>` : ''}
+        ${p.lat == null ? '<span class="place-nopin">未定位</span>' : ''}
+      </div>
+      ${p.eaten && p.review ? `<div class="event-notes">「${escapeHtml(p.review)}」</div>` : ''}
+      ${p.notes ? `<div class="event-notes">${escapeHtml(p.notes)}</div>` : ''}
+    </div>
+    ${isEditor ? `<button class="event-menu" aria-label="選項">•••</button>` : ''}
+  </div>`;
+}
+
+function placePopupHTML(p) {
+  const stars = p.eaten && p.rating ? '<br>' + starsHTML(p.rating) : '';
+  const nav = p.gmaps_url
+    ? `<br><a href="${safeUrl(p.gmaps_url)}" target="_blank" rel="noopener noreferrer">🧭 導航</a>` : '';
+  return `<div class="place-popup"><b>${escapeHtml(p.name)}</b>${stars}${nav}</div>`;
+}
+
+// 點清單卡片 → 地圖飛過去開氣泡
+function focusPlace(id) {
+  const p = S.places.find(x => x.id === id);
+  if (!p) return;
+  const m = foodMarkers[id];
+  if (!m) {
+    if (p.lat == null) showToast('這家店還沒有定位', true);
+    return;
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  foodMap.flyTo([p.lat, p.lng], Math.max(foodMap.getZoom(), 16), { duration: 0.6 });
+  m.openPopup();
+}
+
+// 點地圖 pin → 清單捲到該店並亮一下
+function highlightPlaceCard(id) {
+  const el = document.querySelector(`.place-item[data-id="${id}"]`);
+  if (!el) return;
+  el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1200);
+}
+
+function showPlaceMenu(id) {
+  const p = S.places.find(x => x.id === id);
+  if (!p) return;
+  const items = [];
+  if (p.eaten) {
+    items.push({ label: '改評分/心得', fn: () => openRateModal(p) });
+    items.push({ label: '改回待吃',    fn: () => revertPlaceTodo(id) });
+  } else {
+    items.push({ label: '標記已吃＆評分', fn: () => openRateModal(p) });
+  }
+  items.push({ label: p.lat == null ? '在地圖上點選位置' : '重新定位（點地圖）', fn: () => startPinPick(id) });
+  items.push({ label: '編輯', fn: () => openEditPlace(p) });
+  items.push({ label: '刪除', fn: () => deletePlace(id), danger: true });
+  showActionSheet(items);
+}
+
+function startPinPick(id) {
+  pinPickId = id;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast('請在地圖上點一下店家位置');
+}
+
+function setPlacePosition(id, lat, lng) {
+  const p = S.places.find(x => x.id === id);
+  if (!p) return;
+  const backup = { lat: p.lat, lng: p.lng };
+  p.lat = lat;
+  p.lng = lng;
+  renderFoodmap();
+  Api.write('fc_places', 'update', { lat, lng }, id)
+    .then(() => showToast('位置已更新 ✓'))
+    .catch(() => {
+      p.lat = backup.lat; p.lng = backup.lng;
+      renderFoodmap(); showToast('更新失敗', true);
+    });
+}
+
+// Place Modal
+function openAddPlace() {
+  document.getElementById('place-modal-title').textContent = '新增店家';
+  document.getElementById('place-id').value    = '';
+  document.getElementById('place-url').value   = '';
+  document.getElementById('place-name').value  = '';
+  document.getElementById('place-notes').value = '';
+  document.getElementById('place-resolve-hint').textContent = '在 Google Maps 按「分享」複製連結,貼上後按「解析」';
+  placeDraft = { lat: null, lng: null, address: null };
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  openModal('place-modal');
+}
+
+function openEditPlace(p) {
+  document.getElementById('place-modal-title').textContent = '編輯店家';
+  document.getElementById('place-id').value    = p.id;
+  document.getElementById('place-url').value   = p.gmaps_url || '';
+  document.getElementById('place-name').value  = p.name;
+  document.getElementById('place-notes').value = p.notes || '';
+  document.getElementById('place-resolve-hint').textContent = p.address ? `📍 ${p.address}` : '';
+  placeDraft = { lat: p.lat, lng: p.lng, address: p.address };
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === p.category));
+  openModal('place-modal');
+}
+
+async function resolvePlaceUrl() {
+  const url  = document.getElementById('place-url').value.trim();
+  const hint = document.getElementById('place-resolve-hint');
+  const btn  = document.getElementById('place-resolve-btn');
+  if (!url) { showToast('請先貼上 Google Maps 連結', true); return; }
+
+  btn.disabled = true;
+  btn.textContent = '解析中';
+  hint.textContent = '解析中…';
+  try {
+    const r = await Api.resolvePlace(url);
+    if (r.name) document.getElementById('place-name').value = r.name;
+    placeDraft = { lat: r.lat, lng: r.lng, address: r.address };
+    if (r.lat != null) {
+      hint.textContent = `📍 ${r.address || `已定位（${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}）`}`;
+    } else if (r.name) {
+      hint.textContent = '⚠️ 抓不到座標,儲存後可用選單「在地圖上點選位置」補定位';
+    } else {
+      hint.textContent = '⚠️ 解析不到資料,請手動輸入店名';
+    }
+  } catch (err) {
+    hint.textContent = `⚠️ ${err.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '解析';
+  }
+}
+
+async function savePlace() {
+  const id    = document.getElementById('place-id').value;
+  const name  = document.getElementById('place-name').value.trim();
+  const url   = document.getElementById('place-url').value.trim();
+  const notes = document.getElementById('place-notes').value.trim();
+  const catBtn = document.querySelector('.cat-btn.active');
+
+  if (!name)   { showToast('請輸入店名', true); return; }
+  if (!catBtn) { showToast('請選擇分類', true); return; }
+
+  const data = {
+    name,
+    category:  catBtn.dataset.cat,
+    gmaps_url: url || null,
+    address:   placeDraft.address,
+    lat:       placeDraft.lat,
+    lng:       placeDraft.lng,
+    notes:     notes || null,
+  };
+
+  if (id) {
+    const i = S.places.findIndex(p => p.id === id);
+    const backup = i >= 0 ? { ...S.places[i] } : null;
+    if (i >= 0) S.places[i] = { ...S.places[i], ...data };
+    closeModal('place-modal');
+    render();
+    Api.write('fc_places', 'update', data, id)
+      .then(r => { if (i >= 0) { S.places[i] = r.data; render(); } })
+      .catch(() => {
+        if (i >= 0 && backup) S.places[i] = backup;
+        render(); showToast('儲存失敗', true);
+      });
+  } else {
+    const tempId = `_tmp_${Date.now()}`;
+    S.places.unshift({ id: tempId, ...data, eaten: false, rating: null, review: null, created_at: new Date().toISOString() });
+    closeModal('place-modal');
+    render();
+    if (data.lat != null && foodMap) foodMap.flyTo([data.lat, data.lng], 15, { duration: 0.6 });
+    Api.write('fc_places', 'insert', data)
+      .then(r => {
+        const idx = S.places.findIndex(p => p.id === tempId);
+        if (idx >= 0) S.places[idx] = r.data;
+        render();
+      })
+      .catch(() => {
+        S.places = S.places.filter(p => p.id !== tempId);
+        render(); showToast('儲存失敗', true);
+      });
+  }
+}
+
+// Rate Modal(標記已吃 + 評分)
+function openRateModal(p) {
+  document.getElementById('rate-place-id').value = p.id;
+  document.getElementById('rate-place-name').textContent = `「${p.name}」`;
+  document.getElementById('rate-review').value = p.review || '';
+  setStars(p.rating || 0);
+  openModal('rate-modal');
+}
+
+function setStars(n) {
+  rateStars = n;
+  document.querySelectorAll('#star-picker button').forEach(b =>
+    b.classList.toggle('lit', +b.dataset.star <= n));
+}
+
+function saveRating() {
+  const id     = document.getElementById('rate-place-id').value;
+  const review = document.getElementById('rate-review').value.trim();
+  if (!rateStars) { showToast('請點星星評分', true); return; }
+
+  const p = S.places.find(x => x.id === id);
+  if (!p) return;
+  const backup = { eaten: p.eaten, rating: p.rating, review: p.review };
+  p.eaten  = true;
+  p.rating = rateStars;
+  p.review = review || null;
+  closeModal('rate-modal');
+  render();
+  Api.write('fc_places', 'update', { eaten: true, rating: rateStars, review: review || null }, id)
+    .then(() => showToast('已標記吃過 ✓'))
+    .catch(() => { Object.assign(p, backup); render(); showToast('儲存失敗', true); });
+}
+
+function revertPlaceTodo(id) {
+  const p = S.places.find(x => x.id === id);
+  if (!p) return;
+  p.eaten = false;  // 保留 rating/review,之後再標已吃可沿用
+  render();
+  Api.write('fc_places', 'update', { eaten: false }, id)
+    .catch(() => { p.eaten = true; render(); showToast('操作失敗', true); });
+}
+
+function deletePlace(id) {
+  if (!confirm('確定要刪除這家店？')) return;
+  const backup = [...S.places];
+  S.places = S.places.filter(p => p.id !== id);
+  render();
+  Api.write('fc_places', 'delete', null, id)
+    .catch(() => { S.places = backup; render(); showToast('刪除失敗', true); });
+}
+
 // ── FAB / Tab Switching ────────────────────────────────────────────────────
 function openAddModal() {
   if (S.tab === 'wishlist') openAddWish();
+  else if (S.tab === 'foodmap') openAddPlace();
   else openAddEvent(S.view === 'grid' && S.selectedDay ? S.selectedDay : null);
 }
 
 function switchTab(tab) {
   S.tab = tab;
+  pinPickId = null;  // 離開分頁就取消「點地圖定位」模式
   document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
   document.getElementById('view-toggle-bar').classList.toggle('hidden', tab !== 'calendar');
   window.scrollTo(0, 0);

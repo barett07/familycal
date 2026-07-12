@@ -25,6 +25,36 @@ const Api = (() => {
     return data;
   }
 
+  async function getPlaces() {
+    const { data, error } = await client()
+      .from('fc_places')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+
+  async function resolvePlace(url) {
+    const auth = Auth.get();
+    if (!auth?.passcode) throw new Error('尚未驗證');
+
+    const res = await fetch(FC_RESOLVE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-FC-Passcode': auth.passcode,
+      },
+      body: JSON.stringify({ url }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || '解析失敗');
+    }
+
+    return res.json();
+  }
+
   async function write(table, action, data, id) {
     const auth = Auth.get();
     if (!auth?.passcode) throw new Error('尚未驗證');
@@ -46,5 +76,5 @@ const Api = (() => {
     return res.json();
   }
 
-  return { getEvents, getWishlist, write };
+  return { getEvents, getWishlist, getPlaces, resolvePlace, write };
 })();

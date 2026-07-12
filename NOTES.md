@@ -64,6 +64,22 @@ history.scrollRestoration = 'manual';
 
 `scrollIntoView` 和 `window.scrollTo` 同時用 `requestAnimationFrame` 包起來時,後排的會覆蓋前排。`loadData` 完成後若再呼叫一次 `scrollTo(0,0)`,會把 `renderListView` 的 `scrollIntoView` 覆蓋掉。
 
+## Google Maps 短網址解析配方(fc-resolve-place,2026-07-12)
+
+iPhone 分享的 `maps.app.goo.gl` 短網址,解析店名/地址/座標的正確方法(全部實測過):
+
+1. **店名+地址**:用社群爬蟲 UA(`facebookexternalhit/1.1`)fetch 短網址,`og:title` 是「店名 · 4.6★(872) · 餐廳」→ 以**前後有空格的 `" · "`** split 取第一段(店名本身可能含無空格的 `·`);`og:description` 是乾淨地址。一般 UA 只會拿到「Google Maps」通用標題。
+2. **座標**:短網址 `redirect: 'manual'` 取 Location(`maps.google.com/?q=…&ftid=…`),改寫成 `maps.google.com/maps?q=…&ftid=…&output=embed` 再 fetch,HTML 內才有店家精確座標(lat,lng 與 lng,lat 兩種順序都會出現,取反轉後也存在的那組)。
+3. **桌面版完整網址**(`/maps/place/…!3d<lat>!4d<lng>`)直接從 `!3d!4d` 取座標;但它的 `og:description` 是「★★★★★ · 餐廳」評分文字,**不能當地址**(開頭 ★ 要跳過)。
+
+**踩過的坑**:
+- 一般頁面的 `APP_INITIALIZATION_STATE` 和 og:image 的 staticmap center 是**區域視窗中心(zoom=9)**,不是店家座標,不能用
+- Nominatim(OSM)查台灣門牌只能到「街」級(OSM 台灣缺門牌資料),不採用
+
+## 美食地圖版面:地圖放在 #sticky-top 內
+
+`#foodmap-map`(40dvh)放在 `#sticky-top` 最下方而不是 `#content` 裡,非 foodmap 分頁時 `hidden`。好處:既有的 ResizeObserver 量整個 sticky-top 高度自動撐開 `#content` 的 padding-top,清單自然從地圖下方開始捲動,完全不動整頁捲動架構;`.place-item` 沿用 `.event-item` 的 `scroll-margin-top: var(--sticky-h)`,點 pin 捲清單也正確。Leaflet 在 hidden→可見後要 `requestAnimationFrame(() => map.invalidateSize())`(renderFoodmap 已處理)。
+
 ## 資料庫加固記錄(2026-07-09)
 
 - `fc_set_updated_at()` 已鎖定 `search_path = ''`(消除 Supabase security advisor 警告,觸發器實測正常)

@@ -1,5 +1,5 @@
 # 各 Edge Function 的設定寫死在此,CLI 部署時自動套用,不再依賴人工帶參數
-# 三個 function 都是 verify_jwt = false(passcode 自行驗證;fc-ical 給行事曆訂閱)
+# 四個 function 都是 verify_jwt = false(passcode 自行驗證;fc-ical 給行事曆訂閱)
 project_id = "familycal"
 
 [functions.fc-write]
@@ -9,4 +9,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.fc-ical]
+verify_jwt = false
+
+[functions.fc-resolve-place]
 verify_jwt = false

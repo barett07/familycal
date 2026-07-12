@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const ALLOWED_TABLES = ['fc_events', 'fc_wishlist'];
+const ALLOWED_TABLES = ['fc_events', 'fc_wishlist', 'fc_places'];
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {

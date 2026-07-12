@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 REF="oqyjixphmdrhcmomskth"
 BASE="https://$REF.supabase.co/functions/v1"
 
-for fn in fc-write fc-auth fc-ical; do
+for fn in fc-write fc-auth fc-ical fc-resolve-place; do
   supabase functions deploy "$fn" --project-ref "$REF"
 done
 
@@ -24,8 +24,8 @@ else
   FAIL=1
 fi
 
-# fc-write / fc-auth:免 JWT(passcode 自行驗證);被閘道擋 = verify_jwt 被重置
-for fn in fc-write fc-auth; do
+# fc-write / fc-auth / fc-resolve-place:免 JWT(passcode 自行驗證);被閘道擋 = verify_jwt 被重置
+for fn in fc-write fc-auth fc-resolve-place; do
   RESP=$(curl -s -X POST "$BASE/$fn" -H "Content-Type: application/json" -d '{}')
   if echo "$RESP" | grep -qi "authorization header"; then
     echo "❌ $fn 被閘道擋下:verify_jwt 被重置成 true,App 寫入/登入會壞!"
