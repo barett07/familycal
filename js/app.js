@@ -80,14 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 美食地圖:店家 modal 的分類 picker(建立在全域 .type-btn 綁定之後,不會被重複綁定)
+  // 美食地圖:店家 modal 的分類 picker(可複選,建立在全域 .type-btn 綁定之後,不會被重複綁定)
   document.getElementById('place-cat-picker').innerHTML = CATS.map(c =>
     `<button type="button" class="type-btn cat-btn" data-cat="${c}">${CAT_CONFIG[c]} ${c}</button>`).join('');
   document.querySelectorAll('.cat-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    });
+    btn.addEventListener('click', () => btn.classList.toggle('active'));
   });
 
   // 美食地圖:星星 picker
@@ -821,7 +818,7 @@ function locateMe() {
 function placeIcon(p) {
   return L.divIcon({
     className: 'place-pin-wrap',
-    html: `<div class="place-pin${p.eaten ? ' pin-eaten' : ''}">${CAT_CONFIG[p.category] || '🍽️'}</div>`,
+    html: `<div class="place-pin${p.eaten ? ' pin-eaten' : ''}">${CAT_CONFIG[(p.categories || [])[0]] || '🍽️'}</div>`,
     iconSize: [34, 43],
     iconAnchor: [17, 43],
     popupAnchor: [0, -46],
@@ -832,7 +829,7 @@ function filteredPlaces() {
   return S.places.filter(p => {
     if (S.foodFilter.status === 'todo'  &&  p.eaten) return false;
     if (S.foodFilter.status === 'eaten' && !p.eaten) return false;
-    if (S.foodFilter.category && p.category !== S.foodFilter.category) return false;
+    if (S.foodFilter.category && !(p.categories || []).includes(S.foodFilter.category)) return false;
     return true;
   });
 }
@@ -890,7 +887,8 @@ function renderFoodmap() {
 }
 
 function placeItemHTML(p, isEditor) {
-  const emoji = CAT_CONFIG[p.category] || '🍽️';
+  const cats = p.categories || [];
+  const emoji = CAT_CONFIG[cats[0]] || '🍽️';
   return `<div class="event-item place-item" data-id="${p.id}">
     <div class="place-cat-emoji">${emoji}</div>
     <div class="event-body">
@@ -901,6 +899,7 @@ function placeItemHTML(p, isEditor) {
       ${p.address ? `<div class="place-address">📍 ${escapeHtml(p.address)}</div>` : ''}
       <div class="event-row2">
         <span class="${p.eaten ? 'place-badge-eaten' : 'place-badge-todo'}">${p.eaten ? '已吃' : '待吃'}</span>
+        ${cats.length > 1 ? `<span class="place-cats">${cats.map(c => CAT_CONFIG[c] || '').join('')}</span>` : ''}
         ${PRICE_LEVELS[p.price_level] ? `<span class="place-price">${PRICE_LEVELS[p.price_level].sym} ${PRICE_LEVELS[p.price_level].label}</span>` : ''}
         ${p.gmaps_url ? `<a class="wish-link place-nav" href="${safeUrl(p.gmaps_url)}" target="_blank" rel="noopener noreferrer">🧭 導航</a>` : ''}
         ${p.lat == null ? '<span class="place-nopin">未定位</span>' : ''}
@@ -1001,7 +1000,7 @@ function openEditPlace(p) {
   document.getElementById('place-notes').value = p.notes || '';
   document.getElementById('place-resolve-hint').textContent = p.address ? `📍 ${p.address}` : '';
   placeDraft = { lat: p.lat, lng: p.lng, address: p.address };
-  document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === p.category));
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', (p.categories || []).includes(b.dataset.cat)));
   setPlacePrice(p.price_level || 0);
   openModal('place-modal');
 }
@@ -1039,14 +1038,14 @@ async function savePlace() {
   const name  = document.getElementById('place-name').value.trim();
   const url   = document.getElementById('place-url').value.trim();
   const notes = document.getElementById('place-notes').value.trim();
-  const catBtn = document.querySelector('.cat-btn.active');
+  const cats = [...document.querySelectorAll('.cat-btn.active')].map(b => b.dataset.cat);
 
-  if (!name)   { showToast('請輸入店名', true); return; }
-  if (!catBtn) { showToast('請選擇分類', true); return; }
+  if (!name)        { showToast('請輸入店名', true); return; }
+  if (!cats.length) { showToast('請至少選一個分類', true); return; }
 
   const data = {
     name,
-    category:  catBtn.dataset.cat,
+    categories: cats,
     gmaps_url: url || null,
     address:   placeDraft.address,
     lat:       placeDraft.lat,
