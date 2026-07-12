@@ -75,6 +75,7 @@ iPhone 分享的 `maps.app.goo.gl` 短網址,解析店名/地址/座標的正確
 **踩過的坑**:
 - 一般頁面的 `APP_INITIALIZATION_STATE` 和 og:image 的 staticmap center 是**區域視窗中心(zoom=9)**,不是店家座標,不能用
 - Nominatim(OSM)查台灣門牌只能到「街」級(OSM 台灣缺門牌資料),不採用
+- **地址語言跟著伺服器所在地走**:Edge Function 不在台灣(Stan 實測拿到英文+韓文混雜地址),必須在 og 抓取的網址上加 `hl=zh-TW` 強制繁中(改抓「轉址後目標網址 + hl=zh-TW」,並帶 `Accept-Language: zh-TW`;從台灣 IP 測不出這個問題,要用 `hl=en` 反向驗證)
 
 ## 美食地圖版面:地圖放在 #sticky-top 內
 

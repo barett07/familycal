@@ -32,7 +32,10 @@ async function fetchOgTags(url: string): Promise<{ name: string | null; address:
   let address: string | null = null;
   try {
     const r = await fetch(url, {
-      headers: { 'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)' },
+      headers: {
+        'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+        'Accept-Language': 'zh-TW,zh;q=0.9',
+      },
     });
     const html = await r.text();
     const og = (prop: string) =>
@@ -111,7 +114,11 @@ Deno.serve(async (req: Request) => {
     } catch { /* 追不到就用原網址繼續 */ }
   }
 
-  const { name, address } = await fetchOgTags(input.href);
+  // og 標籤改抓「轉址後的目標網址 + hl=zh-TW」:伺服器不在台灣時,
+  // Google 會依伺服器所在地回英文地址,hl 參數可強制繁體中文(實測有效)
+  const ogUrl = new URL(target.href);
+  ogUrl.searchParams.set('hl', 'zh-TW');
+  const { name, address } = await fetchOgTags(ogUrl.href);
 
   // 桌面版完整網址的 !3d<lat>!4d<lng> 是店家精確座標,可直接用
   let lat: number | null = null;
