@@ -95,11 +95,16 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => setStars(+btn.dataset.star));
   });
 
-  // 美食地圖:人均價位 picker(選填,點已選的取消)
-  document.getElementById('price-picker').innerHTML = Object.entries(PRICE_LEVELS).map(([lv, c]) =>
-    `<button type="button" class="type-btn price-btn" data-level="${lv}">${c.sym} ${c.label}</button>`).join('');
+  // 美食地圖:人均價位 picker(選填,點已選的取消)——評分 modal 與店家 modal 各一組
+  const priceBtnsHTML = (cls) => Object.entries(PRICE_LEVELS).map(([lv, c]) =>
+    `<button type="button" class="type-btn ${cls}" data-level="${lv}">${c.sym} ${c.label}</button>`).join('');
+  document.getElementById('price-picker').innerHTML = priceBtnsHTML('price-btn');
   document.querySelectorAll('.price-btn').forEach(btn => {
     btn.addEventListener('click', () => setPrice(+btn.dataset.level === ratePrice ? 0 : +btn.dataset.level));
+  });
+  document.getElementById('place-price-picker').innerHTML = priceBtnsHTML('pprice-btn');
+  document.querySelectorAll('.pprice-btn').forEach(btn => {
+    btn.addEventListener('click', () => setPlacePrice(+btn.dataset.level === placePrice ? 0 : +btn.dataset.level));
   });
 });
 
@@ -762,7 +767,8 @@ let foodMarkers = {};
 let foodMapFitted = false;
 let placeDraft = { lat: null, lng: null, address: null };  // place-modal 的解析結果暫存
 let rateStars = 0;
-let ratePrice = 0;     // 人均價位 1–5,0 = 未選
+let ratePrice = 0;     // 評分 modal 的人均價位 1–5,0 = 未選
+let placePrice = 0;    // 店家 modal 的人均價位(新增時的預估)
 let pinPickId = null;  // 「在地圖上點選位置」模式中的店家 id
 
 function ensureFoodMap() {
@@ -895,7 +901,7 @@ function placeItemHTML(p, isEditor) {
       ${p.address ? `<div class="place-address">📍 ${escapeHtml(p.address)}</div>` : ''}
       <div class="event-row2">
         <span class="${p.eaten ? 'place-badge-eaten' : 'place-badge-todo'}">${p.eaten ? '已吃' : '待吃'}</span>
-        ${p.eaten && PRICE_LEVELS[p.price_level] ? `<span class="place-price">${PRICE_LEVELS[p.price_level].sym} ${PRICE_LEVELS[p.price_level].label}</span>` : ''}
+        ${PRICE_LEVELS[p.price_level] ? `<span class="place-price">${PRICE_LEVELS[p.price_level].sym} ${PRICE_LEVELS[p.price_level].label}</span>` : ''}
         ${p.gmaps_url ? `<a class="wish-link place-nav" href="${safeUrl(p.gmaps_url)}" target="_blank" rel="noopener noreferrer">🧭 導航</a>` : ''}
         ${p.lat == null ? '<span class="place-nopin">未定位</span>' : ''}
       </div>
@@ -983,6 +989,7 @@ function openAddPlace() {
   document.getElementById('place-resolve-hint').textContent = '在 Google Maps 按「分享」複製連結,貼上後按「解析」';
   placeDraft = { lat: null, lng: null, address: null };
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  setPlacePrice(0);
   openModal('place-modal');
 }
 
@@ -995,6 +1002,7 @@ function openEditPlace(p) {
   document.getElementById('place-resolve-hint').textContent = p.address ? `📍 ${p.address}` : '';
   placeDraft = { lat: p.lat, lng: p.lng, address: p.address };
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === p.category));
+  setPlacePrice(p.price_level || 0);
   openModal('place-modal');
 }
 
@@ -1044,6 +1052,7 @@ async function savePlace() {
     lat:       placeDraft.lat,
     lng:       placeDraft.lng,
     notes:     notes || null,
+    price_level: placePrice || null,
   };
 
   if (id) {
@@ -1096,6 +1105,12 @@ function setStars(n) {
 function setPrice(n) {
   ratePrice = n;
   document.querySelectorAll('.price-btn').forEach(b =>
+    b.classList.toggle('active', +b.dataset.level === n));
+}
+
+function setPlacePrice(n) {
+  placePrice = n;
+  document.querySelectorAll('.pprice-btn').forEach(b =>
     b.classList.toggle('active', +b.dataset.level === n));
 }
 
