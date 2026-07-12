@@ -14,7 +14,7 @@
 | Edge Functions | `fc-write`(寫入,帶 `X-FC-Passcode`)、`fc-auth`(驗證)、`fc-ical`(行事曆訂閱)、`fc-resolve-place`(解析 Google Maps 連結) |
 | 地圖 | Leaflet 1.9.4 + OpenStreetMap(CDN 載入,免 key) |
 
-- 資料表:`fc_events`(id, title, type, start_date, end_date, event_time, notes, completed, …)、`fc_wishlist`(id, name, url, notes, completed, scheduled_event_id FK → fc_events, …)、`fc_places`(id, name, category, gmaps_url, address, lat, lng, notes, eaten, rating, review, …)
+- 資料表:`fc_events`(id, title, type, start_date, end_date, event_time, notes, completed, …)、`fc_wishlist`(id, name, url, notes, completed, scheduled_event_id FK → fc_events, …)、`fc_places`(id, name, category, gmaps_url, address, lat, lng, notes, eaten, rating, review, price_level, …)
 - 事件類型(type CHECK 約束):`醫療回診` / `家庭出遊` / `聚會/聚餐` / `考試` / `雜務`
 - 權限:editor(Stan「福先生」+ 太太「福太太」,完整 CRUD)、viewer(未來給小孩,唯讀);驗證後存 `localStorage.fc_auth_v1`
 - Supabase Secrets:`FC_EDITOR_PASSCODE`、`FC_VIEWER_PASSCODE`(Dashboard 手動管理)
