@@ -98,3 +98,10 @@ iPhone 分享的 `maps.app.goo.gl` 短網址,解析店名/地址/座標的正確
 - **美食地圖分頁隱藏「即將到來」橫幅**(`renderUpcoming` 開頭判斷 `S.tab === 'foodmap'`),地圖空間優先
 - **auth 本地預覽旁路**:`Auth.verify` 在 localhost 直接回 `editor`(fc-auth CORS 白名單擋本地);僅供看 UI,寫入仍被 fc-write CORS 擋。**本地預覽時資料是正式資料,不要按儲存**
 - 保持深色單主題(PWA meta 定死黑色系),未做淺色版
+
+## 深淺雙主題(2026-07-19)
+
+- 色彩全走 `:root` 變數,`@media (prefers-color-scheme: light)` 只重定義變數;**新增顏色兩個主題都要定義**
+- 預混色 token:`--upcoming-bg`(橫幅底,深 `#1e1300`/淺 `#FCEEDA`,不能用半透明,見「sticky-top 半透明」段)、`--header-glass`(頂欄毛玻璃底)
+- 橘底(`--accent`)上的文字一律 `#fff`(2026-07-19 從 #000 全面改白,共 7 處)
+- PWA 狀態列 `apple-mobile-web-app-status-bar-style` 已從 `black-translucent` 改 `default`(定死 black-translucent 在淺色模式下狀態列白字看不見);**改動要重啟 PWA 才生效**,異常時刪掉主畫面圖示重加。`theme-color` meta 分深淺兩條
