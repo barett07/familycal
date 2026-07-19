@@ -11,8 +11,11 @@
   --text3:    rgba(235,235,245,0.3);
   --sep:      rgba(84,84,88,0.65);
   --accent:   #ff9f0a;
+  --accent-d: rgba(255,159,10,0.16);
   --radius:   14px;
   --safe-b:   env(safe-area-inset-bottom, 0px);
+  --glass-lq: rgba(28,28,30,0.5);
+  --glass-edge: rgba(255,255,255,0.12);
 }
 
 html {
@@ -28,6 +31,8 @@ body {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
+  /* 分頁/月份轉場的 translateX 會短暫超出視窗,沒有這行桌面會閃水平捲軸 */
+  overflow-x: hidden;
 }
 
 /* 全域：移除 300ms tap 延遲 */
@@ -217,25 +222,62 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
   font-size: 14px; font-weight: 500;
 }
 
-/* ── Tab Navigation ───────────────────────────────────────────────────────── */
+/* ── Tab Navigation(底部液態玻璃浮動 Tab Bar)──────────────────────────── */
 .tab-nav {
-  flex-shrink: 0;
-  display: flex;
-  background: var(--s1);
-  border-bottom: 1px solid var(--sep);
+  position: fixed;
+  left: 50%;
+  bottom: max(8px, calc(var(--safe-b) - 16px));
+  transform: translateX(-50%);
+  z-index: 150;
+  display: flex; gap: 3px;
+  padding: 5px;
+  border-radius: 999px;
+  background: var(--glass-lq);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid var(--glass-edge);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.32), 0 1px 2px rgba(0,0,0,0.1),
+              inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 1px rgba(255,255,255,0.05);
+  max-width: calc(100vw - 20px);
+}
+
+.tab-lens {
+  position: absolute;
+  top: 5px; bottom: 5px; left: 0;
+  width: 0;
+  border-radius: 999px;
+  background: var(--accent-d);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 1px rgba(255,255,255,0.06),
+              0 2px 10px rgba(0,0,0,0.15);
+  pointer-events: none;
+  transition: transform 0.5s cubic-bezier(0.3,1.35,0.35,1), width 0.5s cubic-bezier(0.3,1.35,0.35,1);
 }
 
 .tab {
-  flex: 1;
+  position: relative;
   display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 13px 8px;
+  padding: 9px 14px;
   min-height: 44px;
-  font-size: 14px; font-weight: 500;
+  border-radius: 999px;
+  font-size: 14px; font-weight: 600;
   color: var(--text2);
-  transition: color 0.15s;
+  white-space: nowrap;
+  transition: transform 0.1s ease-out, color 0.15s;
 }
 .tab.active { color: var(--accent); }
+.tab:active { transform: scale(0.96); }
 .tab-icon { font-size: 15px; }
+
+@media (max-width: 400px) {
+  .tab { padding: 9px 12px; }
+  .tab:not(.active) .tab-label { display: none; }
+}
+
+/* 分頁/月份切換轉場 */
+.slide-l { animation: pageSlideL 0.34s cubic-bezier(0.32,0.72,0.28,1); }
+.slide-r { animation: pageSlideR 0.34s cubic-bezier(0.32,0.72,0.28,1); }
+@keyframes pageSlideL { from { opacity: 0; transform: translateX(32px);  } to { opacity: 1; transform: none; } }
+@keyframes pageSlideR { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: none; } }
 
 /* ── View Toggle ──────────────────────────────────────────────────────────── */
 #view-toggle-bar {
@@ -277,10 +319,20 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
   background: var(--s3);
   color: var(--text);
 }
+.view-toggle:active { transform: scale(0.96); }
+.cal-nav button:active { transform: scale(0.92); }
+
+/* ── 輔助設定 ─────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .tab-nav, .app-header { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--s1); }
+}
 
 /* ── Content Area ─────────────────────────────────────────────────────────── */
 #content {
-  padding-bottom: calc(80px + var(--safe-b));
+  padding-bottom: calc(150px + var(--safe-b));
 }
 
 /* ── Month Header ─────────────────────────────────────────────────────────── */
@@ -500,7 +552,7 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
 /* ── FAB ──────────────────────────────────────────────────────────────────── */
 .fab {
   position: fixed;
-  bottom: calc(24px + var(--safe-b));
+  bottom: calc(78px + var(--safe-b));
   right: 20px;
   width: 56px; height: 56px;
   background: var(--accent);
@@ -546,6 +598,15 @@ button { cursor: pointer; border: none; background: none; color: inherit; font-f
   background: var(--s3);
   border-radius: 2px;
   margin: 10px auto 0;
+  position: relative;
+  touch-action: none;
+  cursor: grab;
+}
+/* 擴大把手觸控區(視覺不變) */
+.modal-handle::before {
+  content: '';
+  position: absolute;
+  inset: -14px -70px;
 }
 
 .modal-header {

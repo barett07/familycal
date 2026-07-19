@@ -19,6 +19,9 @@ const Auth = (() => {
   }
 
   async function verify(passcode) {
+    // 本地預覽(localhost)直接放行:fc-auth CORS 白名單只允許正式網域,
+    // 本地驗證必失敗;此旁路僅供預覽 UI,實際寫入(fc-write)仍會被 CORS 擋
+    if (['localhost', '127.0.0.1'].includes(location.hostname)) return 'editor';
     const res = await fetch(FC_AUTH_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

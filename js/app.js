@@ -118,6 +118,7 @@ function showApp() {
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   window.scrollTo(0, 0);
+  requestAnimationFrame(moveTabLens);
   loadData();
 }
 
@@ -194,7 +195,8 @@ function renderUpcoming() {
   });
 
   const banner = document.getElementById('upcoming-banner');
-  if (upcoming.length === 0) { banner.classList.add('hidden'); return; }
+  // 美食地圖分頁不顯示(地圖已佔掉 sticky-top 大半空間)
+  if (upcoming.length === 0 || S.tab === 'foodmap') { banner.classList.add('hidden'); return; }
 
   const wasHidden = banner.classList.contains('hidden');
   banner.classList.remove('hidden');
@@ -543,6 +545,66 @@ function closeModal(id) {
   document.documentElement.style.background = '';
   setTimeout(() => m.classList.add('hidden'), 300);
 }
+
+// ── Modal 把手拖曳關閉(彈簧物理 damping 0.8 / response 0.3,Apple design)──
+(() => {
+  const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('.modal-handle').forEach(handle => {
+    const sheet = handle.closest('.modal-sheet');
+    const modal = handle.closest('.modal');
+    if (!sheet || !modal) return;
+    let drag = false, y = 0, py0 = 0, lastY = 0, lastT = 0, vel = 0, raf = null;
+    const apply  = () => { sheet.style.transform = `translateY(${y}px)`; };
+    const rubber = (over, dim, c = 0.55) => (over * dim * c) / (dim + c * Math.abs(over));
+    function spring(target, v0, done) {
+      cancelAnimationFrame(raf);
+      const zeta = 0.8, omega = 2 * Math.PI / 0.3;
+      let x = y, v = v0 || 0, last = performance.now();
+      function step(now) {
+        const dt = Math.min(0.032, (now - last) / 1000); last = now;
+        const a = -omega * omega * (x - target) - 2 * zeta * omega * v;
+        v += a * dt; x += v * dt;
+        y = x; apply();
+        if (Math.abs(x - target) < 0.3 && Math.abs(v) < 0.3) { y = target; apply(); done && done(); return; }
+        raf = requestAnimationFrame(step);
+      }
+      raf = requestAnimationFrame(step);
+    }
+    handle.addEventListener('pointerdown', e => {
+      if (REDUCE) return;
+      drag = true; cancelAnimationFrame(raf);
+      sheet.style.transition = 'none';   // 拖曳期間停用 CSS transition,1:1 追蹤
+      y = 0; py0 = e.clientY; lastY = e.clientY; lastT = performance.now(); vel = 0;
+      handle.setPointerCapture(e.pointerId);
+    });
+    handle.addEventListener('pointermove', e => {
+      if (!drag) return;
+      const now = performance.now(), dt = now - lastT;
+      if (dt > 0) { vel = (e.clientY - lastY) / dt * 1000; lastY = e.clientY; lastT = now; }
+      let ny = e.clientY - py0;
+      if (ny < 0) ny = rubber(ny, sheet.offsetHeight);  // 往上超過頂端 → 橡皮筋阻力
+      y = ny; apply();
+    });
+    const end = () => {
+      if (!drag) return; drag = false;
+      const h = sheet.offsetHeight + 40;
+      const rate = 0.99;
+      const projected = y + (vel / 1000) * rate / (1 - rate) * 16;  // 動量投射
+      if (projected > h * 0.35) {
+        modal.classList.remove('open');
+        document.documentElement.style.background = '';
+        spring(h, vel / 60, () => {
+          modal.classList.add('hidden');
+          sheet.style.transform = ''; sheet.style.transition = '';
+        });
+      } else {
+        spring(0, vel / 60, () => { sheet.style.transform = ''; sheet.style.transition = ''; });
+      }
+    };
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+  });
+})();
 
 // Event Modal
 function openAddEvent(prefilledDate = null) {
@@ -1157,13 +1219,34 @@ function openAddModal() {
   else openAddEvent(S.view === 'grid' && S.selectedDay ? S.selectedDay : null);
 }
 
+// ── Tab Bar 透鏡與轉場(Apple design)────────────────────────────────────
+const TAB_ORDER = ['calendar', 'wishlist', 'foodmap'];
+function moveTabLens() {
+  const lens = document.getElementById('tab-lens');
+  const act = document.querySelector('.tab.active');
+  if (!lens || !act || !act.offsetWidth) return;
+  lens.style.width = act.offsetWidth + 'px';
+  lens.style.transform = `translateX(${act.offsetLeft}px)`;
+}
+function slideIn(el, dir) {
+  if (!el) return;
+  el.classList.remove('slide-l', 'slide-r');
+  void el.offsetWidth;
+  el.classList.add(dir > 0 ? 'slide-l' : 'slide-r');
+  el.addEventListener('animationend', () => el.classList.remove('slide-l', 'slide-r'), { once: true });
+}
+window.addEventListener('resize', moveTabLens);
+
 function switchTab(tab) {
+  const dir = TAB_ORDER.indexOf(tab) - TAB_ORDER.indexOf(S.tab);
   S.tab = tab;
   pinPickId = null;  // 離開分頁就取消「點地圖定位」模式
   document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
   document.getElementById('view-toggle-bar').classList.toggle('hidden', tab !== 'calendar');
   window.scrollTo(0, 0);
   render();
+  requestAnimationFrame(moveTabLens);
+  if (dir !== 0) slideIn(document.getElementById(tab + '-tab'), dir);
 }
 
 function switchView(view) {
@@ -1188,13 +1271,32 @@ function prevMonth() {
   if (--S.gridMonth < 0) { S.gridMonth = 11; S.gridYear--; }
   S.selectedDay = null;
   renderGridView();
+  slideIn(document.getElementById('calendar-grid'), -1);
 }
 
 function nextMonth() {
   if (++S.gridMonth > 11) { S.gridMonth = 0; S.gridYear++; }
   S.selectedDay = null;
   renderGridView();
+  slideIn(document.getElementById('calendar-grid'), 1);
 }
+
+// ── 月曆(格狀檢視)左右滑動切月 ───────────────────────────────────────────
+(() => {
+  const el = document.getElementById('grid-view');
+  if (!el) return;
+  let sx = 0, sy = 0, t0 = 0, tracking = false;
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; t0 = Date.now(); tracking = true;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (!tracking) return; tracking = false;
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2 && Date.now() - t0 < 600)
+      dx < 0 ? nextMonth() : prevMonth();
+  }, { passive: true });
+})();
 
 function logout() {
   if (!confirm('確定要登出嗎？下次需要重新輸入驗證碼。')) return;

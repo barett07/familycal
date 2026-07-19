@@ -85,3 +85,16 @@ iPhone 分享的 `maps.app.goo.gl` 短網址,解析店名/地址/座標的正確
 
 - `fc_set_updated_at()` 已鎖定 `search_path = ''`(消除 Supabase security advisor 警告,觸發器實測正常)
 - `fc_wishlist.scheduled_event_id` 外鍵已補索引 `fc_wishlist_scheduled_event_id_idx`
+
+## Apple Design 介面(2026-07-19 套用 apple-design skill)
+
+與 railwayshift / railwayroster 同一套設計語言(規範細節見 railwayshift 的 `docs/ui.md`)。familycal 本來就是黑底＋系統字體＋iOS 橘,這次補的是互動手感:
+
+- **Tab Bar 移到底部**(液態玻璃 `.tab-nav` + `.tab-lens` 透鏡):已移出 `#sticky-top`,ResizeObserver 自動適應;`moveTabLens()` 在 `switchTab`/`showApp`/resize 時呼叫。窄螢幕(≤400px)非選中分頁只顯示 emoji
+- **FAB 上移**到 `bottom: calc(78px + safe-b)` 避開 Tab Bar;`#content` padding-bottom 加大到 150px
+- **Modal 把手可拖曳關閉**:彈簧物理(damping 0.8 / response 0.3)、橡皮筋阻力、速度接手;拖曳期間 `sheet.style.transition='none'` 停用 CSS transition,結束後清掉 inline style 還原。把手觸控區用 `::before` 擴大(視覺不變)。開啟動畫仍走原本的 CSS transition
+- **月曆格狀檢視左右滑切月**(`#grid-view` touch 手勢,60px 門檻、水平位移 > 2 倍垂直)
+- **分頁/月份切換有方向性轉場**(`slideIn`,`.slide-l/.slide-r`);**`body{overflow-x:hidden}` 不可移除**,否則桌面切換時水平捲軸閃動(灰色區塊)
+- **美食地圖分頁隱藏「即將到來」橫幅**(`renderUpcoming` 開頭判斷 `S.tab === 'foodmap'`),地圖空間優先
+- **auth 本地預覽旁路**:`Auth.verify` 在 localhost 直接回 `editor`(fc-auth CORS 白名單擋本地);僅供看 UI,寫入仍被 fc-write CORS 擋。**本地預覽時資料是正式資料,不要按儲存**
+- 保持深色單主題(PWA meta 定死黑色系),未做淺色版

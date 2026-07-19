@@ -55,19 +55,6 @@
       <div id="upcoming-list"></div>
     </div>
 
-    <!-- Tab Navigation -->
-    <nav class="tab-nav">
-      <button class="tab active" data-tab="calendar" onclick="switchTab('calendar')">
-        <span class="tab-icon">📅</span> 行事曆
-      </button>
-      <button class="tab" data-tab="wishlist" onclick="switchTab('wishlist')">
-        <span class="tab-icon">✨</span> 想去清單
-      </button>
-      <button class="tab" data-tab="foodmap" onclick="switchTab('foodmap')">
-        <span class="tab-icon">🍜</span> 美食地圖
-      </button>
-    </nav>
-
     <!-- View Toggle (calendar only) -->
     <div id="view-toggle-bar">
       <div class="seg-control">
@@ -97,9 +84,9 @@
       <!-- Grid View -->
       <div id="grid-view" class="hidden">
         <div class="cal-nav">
-          <button onclick="prevMonth()">‹</button>
+          <button onclick="prevMonth()" aria-label="上一個月"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6 9 12l5.5 6"/></svg></button>
           <span id="calendar-month-label"></span>
-          <button onclick="nextMonth()">›</button>
+          <button onclick="nextMonth()" aria-label="下一個月"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 6 5.5 6-5.5 6"/></svg></button>
         </div>
         <div class="cal-weekdays">
           <span>日</span><span>一</span><span>二</span><span>三</span>
@@ -132,6 +119,20 @@
 
   <!-- FAB -->
   <button class="fab hidden" id="fab" onclick="openAddModal()">+</button>
+
+  <!-- 底部液態玻璃 Tab Bar -->
+  <nav class="tab-nav" id="tab-nav">
+    <div class="tab-lens" id="tab-lens"></div>
+    <button class="tab active" data-tab="calendar" onclick="switchTab('calendar')">
+      <span class="tab-icon">📅</span><span class="tab-label">行事曆</span>
+    </button>
+    <button class="tab" data-tab="wishlist" onclick="switchTab('wishlist')">
+      <span class="tab-icon">✨</span><span class="tab-label">想去清單</span>
+    </button>
+    <button class="tab" data-tab="foodmap" onclick="switchTab('foodmap')">
+      <span class="tab-icon">🍜</span><span class="tab-label">美食地圖</span>
+    </button>
+  </nav>
 
 </div><!-- /app -->
 
