@@ -32,11 +32,14 @@
 4. **四個 function 的 `verify_jwt` 都是 false**;避免用 MCP 部署(預設 true 會被靜默重置,stock-tracker 曾因此連續失敗 6 週)
 5. CORS:`fc-write` / `fc-auth` / `fc-resolve-place` 限定 `https://barett07.github.io`;`fc-ical` 保留 `*`(行事曆訂閱需要)
 6. 動版面注意整頁捲動架構的連鎖規則(→ `NOTES.md`)
+7. **對比度須過 WCAG AA**(按鈕文字、表單標籤、placeholder、focus 框、錯誤訊息都算);**不要用裸 `vh`**:版面高度(`min-height`)用 `dvh`、彈窗/捲動區上限(`max-height`)用 `svh`(iOS Safari 網址列);**不用純黑 `#000` / 純白 `#fff`**,改用 off-black / off-white
+8. **畫面上的數字一律來自真實資料**;示範/假資料必須明顯標示,不可混充真實數據。**空狀態、載入中、錯誤狀態都要有畫面**,不能空白
 
 ## ✅ 改完自檢(交付前逐條確認)
 
 - 改了 innerHTML?→ Supabase 來的文字都套了 `escapeHtml()`,URL 套了 `safeUrl()`
 - 改了版面/捲動?→ 對照 NOTES.md 的整頁捲動架構,iPhone Safari 實測過
+- 改了畫面?→ 對比度過 WCAG AA;沒有裸 `vh`(min-height→`dvh`、max-height→`svh`);沒有純黑純白;空/載入中/錯誤狀態都有畫面;數字都是真的
 - 改了 Edge Function?→ 用 `./deploy.sh` 部署且驗證全綠
 - 在本地實際開啟頁面看過改動,不是只看程式碼
 
@@ -51,4 +54,5 @@ GitHub Pages 約 1–2 分鐘後自動更新。
 
 ## 協作規則
 
-- 改程式前列計劃確認 → 本地預覽測試 → Stan OK 後才 commit,Stan 明確說「推上去」才 push
+- **寫任何程式碼前**,先與 Stan 討論方向,等 Stan 說「開始生成」才動手,不可推測性實作
+- **發布三步驟,不可跳過**:1. 本地預覽讓 Stan 確認 → 2. Stan OK 後才 `git add` + `git commit` → 3. Stan 明確說「推上去」才 `git push`

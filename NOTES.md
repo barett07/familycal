@@ -105,3 +105,19 @@ iPhone 分享的 `maps.app.goo.gl` 短網址,解析店名/地址/座標的正確
 - 預混色 token:`--upcoming-bg`(橫幅底,深 `#1e1300`/淺 `#FCEEDA`,不能用半透明,見「sticky-top 半透明」段)、`--header-glass`(頂欄毛玻璃底)
 - 橘底(`--accent`)上的文字一律 `#fff`(2026-07-19 從 #000 全面改白,共 7 處)
 - PWA 狀態列 `apple-mobile-web-app-status-bar-style` 已從 `black-translucent` 改 `default`(定死 black-translucent 在淺色模式下狀態列白字看不見);**改動要重啟 PWA 才生效**,異常時刪掉主畫面圖示重加。`theme-color` meta 分深淺兩條
+
+## 手機用區網 IP 預覽會「連線失敗」(2026-07-26)
+
+`js/auth.js` 原本的預覽旁路只認 `localhost` / `127.0.0.1`,所以在 Mac 上預覽登入正常,
+但用手機連 `http://<Mac 區網 IP>:port/` 預覽時,驗證會走真正的 `fc-auth` fetch
+→ 被 CORS 擋(白名單只有 `https://barett07.github.io`)→ 拋例外 → 顯示「連線失敗,請稍後再試」。
+
+**判斷方式**:密碼錯誤顯示「驗證碼錯誤」,網路層失敗才顯示「連線失敗」——看到後者就是連不到,不是密碼問題。
+
+**解法**:`isPreviewHost()` 改為同時認 localhost、`.local`(Bonjour)與三段私有 IP 網段
+(`10.0.0.0/8`、`192.168.0.0/16`、`172.16.0.0/12`)。正式網域 `barett07.github.io` 不符合任一條件,
+不受影響;旁路只放行 UI,寫入走 `fc-write` 仍被 CORS 擋,所以區網預覽是唯讀。
+
+**不要改 CORS 白名單**來解這個問題(紅線 5)。
+
+**副作用**:預覽伺服器開著時,同一個 Wi-Fi 的人可讀到行事曆內容。測完把伺服器關掉。
