@@ -1,3 +1,6 @@
 .DS_Store
 AGENTS.md
 supabase/.temp/
+
+# 本機預覽伺服器(共用 ../preview.py,不進版控)
+preview.py
