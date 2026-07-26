@@ -32,7 +32,7 @@
 4. **四個 function 的 `verify_jwt` 都是 false**;避免用 MCP 部署(預設 true 會被靜默重置,stock-tracker 曾因此連續失敗 6 週)
 5. CORS:`fc-write` / `fc-auth` / `fc-resolve-place` 限定 `https://barett07.github.io`;`fc-ical` 保留 `*`(行事曆訂閱需要)
 6. 動版面注意整頁捲動架構的連鎖規則(→ `NOTES.md`)
-7. **對比度須過 WCAG AA**(按鈕文字、表單標籤、placeholder、focus 框、錯誤訊息都算);**不要用裸 `vh`**:版面高度(`min-height`)用 `dvh`、彈窗/捲動區上限(`max-height`)用 `svh`(iOS Safari 網址列);**不用純黑 `#000` / 純白 `#fff`**,改用 off-black / off-white
+7. **對比度須過 WCAG AA**(按鈕文字、表單標籤、placeholder、focus 框、錯誤訊息都算);**不要用裸 `vh`**:版面高度(`min-height`)用 `dvh`、彈窗/捲動區上限(`max-height`)用 `svh`。**兩種模式下 `vh` 都大於可見高度**:Safari 分頁差約 40px(網址列)、加到主畫面的 standalone 差約 62px(狀態列,更嚴重);**不用純黑 `#000` / 純白 `#fff`**,改用 off-black / off-white
 8. **畫面上的數字一律來自真實資料**;示範/假資料必須明顯標示,不可混充真實數據。**空狀態、載入中、錯誤狀態都要有畫面**,不能空白
 
 ## ✅ 改完自檢(交付前逐條確認)
