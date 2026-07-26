@@ -18,16 +18,14 @@ const Auth = (() => {
     return get()?.role === 'editor';
   }
 
-  // 本地/區網預覽主機:localhost、Bonjour 主機名、三段私有 IP 網段。
-  // 正式網域是 barett07.github.io,永遠不符合以下任一條件,故不受影響。
+  // 本機預覽主機,只認 localhost。正式網域 barett07.github.io 不符合,線上不觸發。
+  //
+  // 2026-07-26 曾一度放寬到 .local 與三段私有 IP,用途是「手機連 Mac 的區網 IP 預覽」;
+  // 同日改用 iOS 模擬器測試後那些網段不再會被用到（模擬器的請求來源就是 127.0.0.1）,
+  // 故收回。若日後要恢復手機區網預覽,再把私有網段加回來（見 NOTES.md）。
   function isPreviewHost() {
     const h = location.hostname;
-    return h === 'localhost'
-      || h === '127.0.0.1'
-      || h.endsWith('.local')                  // Bonjour,例:macbook.local
-      || /^10\./.test(h)                       // 10.0.0.0/8
-      || /^192\.168\./.test(h)                 // 192.168.0.0/16
-      || /^172\.(1[6-9]|2\d|3[01])\./.test(h); // 172.16.0.0/12
+    return h === 'localhost' || h === '127.0.0.1';
   }
 
   async function verify(passcode) {
