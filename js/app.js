@@ -463,17 +463,36 @@ function showEventMenu(id) {
 
 async function moveEventToWishlist(ev) {
   if (!confirm(`將「${ev.title}」移至想去清單？`)) return;
+  // 兩次寫入分開處理:建立想去項目失敗就整個中止;項目建好之後才失敗的話,
+  // 項目是真的存在了,不能回報「失敗」誤導使用者去重做一次。
+  let r;
   try {
-    const r = await Api.write('fc_wishlist', 'insert', {
+    r = await Api.write('fc_wishlist', 'insert', {
       name: ev.title,
       notes: ev.notes || null,
     });
-    S.wishlist.unshift(r.data);
+  } catch (err) {
+    showToast('移至想去清單失敗：' + err.message, true);
+    return;
+  }
+  S.wishlist.unshift(r.data);
+
+  // 刪除原事件;這步失敗不影響已建立的想去項目
+  let evDeleted = true;
+  try {
     await Api.write('fc_events', 'delete', null, ev.id);
     S.events = S.events.filter(e => e.id !== ev.id);
-    render();
-    showToast('已移至想去清單 ✓');
-  } catch (err) { showToast('失敗：' + err.message, true); }
+  } catch (err) {
+    evDeleted = false;
+    console.error('moveEventToWishlist: 刪除原事件失敗', err.message);
+  }
+
+  render();
+  showToast(
+    evDeleted ? '已移至想去清單 ✓'
+              : '已加入想去清單,但原事件沒刪除成功,請手動刪除',
+    !evDeleted
+  );
 }
 
 function showWishMenu(id) {
@@ -787,37 +806,54 @@ async function scheduleWish() {
   const w = S.wishlist.find(w => w.id === wishId);
   if (!w) return;
 
-  try {
-    const evData = {
-      title: w.name,
-      type: typeBtn?.dataset.type || '家庭出遊',
-      start_date:     date,
-      end_date:       endDate  || null,
-      event_time:     time     || null,
-      event_time_end: timeEnd  || null,
-      notes:          notes    || null,
-    };
-    const evRes = await Api.write('fc_events', 'insert', evData);
-    S.events.push(evRes.data);
-    S.events.sort((a, b) => a.start_date.localeCompare(b.start_date));
+  // 兩次寫入分開處理:建立事件失敗就整個中止;事件建好之後才失敗的話,
+  // 事件是真的存在了,不能回報「失敗」誤導使用者去重做一次。
+  const evData = {
+    title: w.name,
+    type: typeBtn?.dataset.type || '家庭出遊',
+    start_date:     date,
+    end_date:       endDate  || null,
+    event_time:     time     || null,
+    event_time_end: timeEnd  || null,
+    notes:          notes    || null,
+  };
 
-    // 排入後從想去清單移除
+  let evRes;
+  try {
+    evRes = await Api.write('fc_events', 'insert', evData);
+  } catch (err) {
+    showToast('排入行事曆失敗：' + err.message, true);
+    return;
+  }
+  S.events.push(evRes.data);
+  S.events.sort((a, b) => a.start_date.localeCompare(b.start_date));
+
+  // 排入後從想去清單移除;這步失敗不影響已建立的事件
+  let wishRemoved = true;
+  try {
     await Api.write('fc_wishlist', 'delete', null, wishId);
     S.wishlist = S.wishlist.filter(w => w.id !== wishId);
+  } catch (err) {
+    wishRemoved = false;
+    console.error('scheduleWish: 移除想去清單失敗', err.message);
+  }
 
-    closeModal('schedule-modal');
-    // 切回行事曆清單視圖
-    S.tab  = 'calendar';
-    S.view = 'list';
-    document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === 'calendar'));
-    document.getElementById('btn-list').classList.add('active');
-    document.getElementById('btn-grid').classList.remove('active');
-    document.getElementById('list-view').classList.remove('hidden');
-    document.getElementById('grid-view').classList.add('hidden');
-    document.getElementById('view-toggle-bar').classList.remove('hidden');
-    render();
-    showToast('已排入行事曆並從清單移除 ✓');
-  } catch (err) { showToast('失敗：' + err.message, true); }
+  closeModal('schedule-modal');
+  // 切回行事曆清單視圖
+  S.tab  = 'calendar';
+  S.view = 'list';
+  document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === 'calendar'));
+  document.getElementById('btn-list').classList.add('active');
+  document.getElementById('btn-grid').classList.remove('active');
+  document.getElementById('list-view').classList.remove('hidden');
+  document.getElementById('grid-view').classList.add('hidden');
+  document.getElementById('view-toggle-bar').classList.remove('hidden');
+  render();
+  showToast(
+    wishRemoved ? '已排入行事曆並從清單移除 ✓'
+                : '已排入行事曆,但想去清單沒移除成功,請手動刪除',
+    !wishRemoved
+  );
 }
 
 // ── Foodmap ────────────────────────────────────────────────────────────────

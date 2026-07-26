@@ -121,3 +121,34 @@ iPhone 分享的 `maps.app.goo.gl` 短網址,解析店名/地址/座標的正確
 **不要改 CORS 白名單**來解這個問題(紅線 5)。
 
 **副作用**:預覽伺服器開著時,同一個 Wi-Fi 的人可讀到行事曆內容。測完把伺服器關掉。
+
+## 連續兩次寫入的部分失敗處理(2026-07-26)
+
+`scheduleWish()`(排入行事曆)與 `moveEventToWishlist()`(移至想去清單)都要連做兩次 `Api.write`。
+原本兩次包在同一個 `try`,第一次成功、第二次失敗時會顯示「失敗：…」——**但第一次的資料其實已經寫進去了**,
+使用者照訊息重做一次會變成建出兩筆。
+
+改法:拆成兩個 `try`。第一次失敗 → 回報明確原因並 `return`;第二次失敗 → 用旗標記錄,
+訊息據實寫成「已排入行事曆,但想去清單沒移除成功,請手動刪除」,並以 `isError` 顯示紅色。
+
+**新增「一個動作要連續寫入兩次」的功能時,不要用單一 `try` 包住兩次寫入。**
+可用這段掃描檢查(找出單一 try 內有 2 個以上 `Api.write` 的區塊):
+
+```bash
+python3 - <<'PY'
+import re
+src=open('js/app.js',encoding='utf-8').read().split('\n')
+i=0
+while i < len(src):
+    if re.search(r'\btry\s*\{', src[i]):
+        depth=0; j=i; writes=[]
+        while j < len(src):
+            depth += src[j].count('{') - src[j].count('}')
+            if 'Api.write' in src[j]: writes.append(j+1)
+            if depth<=0 and j>i: break
+            j+=1
+        if len(writes)>=2: print(f"⚠️ try 行 {i+1}-{j+1} 內有 {len(writes)} 個 Api.write:{writes}")
+        i=j
+    i+=1
+PY
+```
