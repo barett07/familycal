@@ -161,3 +161,10 @@ while i < len(src):
     i+=1
 PY
 ```
+
+## iCal 訂閱:打勾的事件在 iPhone 消失(2026-09-30)
+
+- **症狀**:事件打勾(completed)後,iPhone 訂閱的行事曆只剩那幾筆不見,其他正常
+- **根因**:`fc-ical` 對 completed 事件輸出 `STATUS:COMPLETED`。RFC 5545 規定 VEVENT 的 STATUS 只能是 `TENTATIVE`/`CONFIRMED`/`CANCELLED`,`COMPLETED` 是 VTODO 專用,iOS 行事曆遇到就把該事件隱藏
+- **修法**:不輸出 completed 狀態(標題維持原樣,Stan 不要 ✓ 前綴)。完成與否只在 App 內顯示
+- 同批補上:`VTIMEZONE`(Asia/Taipei,少了 Google 行事曆會拒收)、有時間的單日事件預設結束 = 開始 +1 小時改用日期運算(原本 23 點開始會輸出非法的 `T24xx00`)

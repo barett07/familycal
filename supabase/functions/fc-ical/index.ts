@@ -29,6 +29,15 @@ Deno.serve(async (req: Request) => {
     'X-WR-CALNAME:福先生&福太太 一步一腳印',
     'X-WR-TIMEZONE:Asia/Taipei',
     'X-WR-CALDESC:家庭行事曆',
+    'BEGIN:VTIMEZONE',
+    'TZID:Asia/Taipei',
+    'BEGIN:STANDARD',
+    'DTSTART:19700101T000000',
+    'TZOFFSETFROM:+0800',
+    'TZOFFSETTO:+0800',
+    'TZNAME:CST',
+    'END:STANDARD',
+    'END:VTIMEZONE',
   ];
 
   for (const ev of (events ?? [])) {
@@ -45,8 +54,11 @@ Deno.serve(async (req: Request) => {
       if (ev.end_date && ev.end_date !== ev.start_date) {
         lines.push(`DTEND;TZID=Asia/Taipei:${endD}T${h}${m}00`);
       } else {
-        const endH = String(parseInt(h) + 1).padStart(2, '0');
-        lines.push(`DTEND;TZID=Asia/Taipei:${startD}T${endH}${m}00`);
+        // 預設 1 小時;用日期運算,23 點開始會正確跨到隔天 00 點(不會出現 24 點)
+        const [y, mo, d] = ev.start_date.split('-').map(Number);
+        const end = new Date(Date.UTC(y, mo - 1, d, parseInt(h) + 1, parseInt(m)));
+        const endStamp = end.toISOString().slice(0, 16).replace(/[-:]/g, '');
+        lines.push(`DTEND;TZID=Asia/Taipei:${endStamp}00`);
       }
     } else {
       const startD = ev.start_date.replace(/-/g, '');
@@ -60,7 +72,8 @@ Deno.serve(async (req: Request) => {
 
     if (ev.notes) lines.push(`DESCRIPTION:${esc(ev.notes)}`);
     lines.push(`CATEGORIES:${esc(ev.type)}`);
-    if (ev.completed) lines.push('STATUS:COMPLETED');
+    // 不輸出 completed:VEVENT 的 STATUS 只允許 TENTATIVE/CONFIRMED/CANCELLED,
+    // COMPLETED 是 VTODO 專用,iOS 行事曆會把帶這行的事件整個隱藏
     lines.push('END:VEVENT');
   }
 
